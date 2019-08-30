@@ -6,12 +6,17 @@ import h5py
 import collections 
 
 
-#class OsirisSuiteError( Exception ) : 
-# 	... 
+class OsirisSuiteError( Exception ) : 
+	... 
 
 
 
 MESH_DIR_PREFIX = '/MS'
+
+
+
+class OsirisData( h5py.File ) : 
+
 
 
 
@@ -33,5 +38,19 @@ class OsirisDataContainer( object ) :
 		self.tracking_data = {} 
 
 
+
 		print( list( os.walk( data_path ) ) )
+
+
+	def load_timesteps( self, timestep = None, stride = None ) : 
+		... 
+
+
+	def load_indices( self, indices = None ) : 
+
+		if not self.uniform_indices  :
+
+			raise OsirisSuiteError( '' )
+
+
 
