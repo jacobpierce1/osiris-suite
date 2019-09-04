@@ -8,7 +8,7 @@ from pprint import pprint
 import re 
 
 
-from .helper_classes import RecursiveAttrDict, AttrDict
+from .helper_classes import AttrDict, RecursiveAttrDict
 
 
 
@@ -34,16 +34,27 @@ class OsirisDataContainer( object ) :
 	'''
 
 
-	def __init__( self, data_path = None, load_whole_file = 0  ) : 
+	def __init__( self, data_path = None, load_whole_file = False,
+				load_empty_directories = False,
+				silent = False , index_by_timestep = False ) : 
 		'''
 			data_path: path to parent directory containing all OSIRIS data (i.e. the directory)
 				containing the OSIRIS output directory MS).
 
-			load_whole_file: if 1, this will make the entire hdf5 get loaded for each file
+			load_whole_file: if nonzero, this will make the entire hdf5 get loaded for each file
 				instead of returning a handle to the hdf5 file accessed at the data. 
 				this does not add much overhead, but if you are only planning to access the data
 				and none of the metadata you don't need to access the whole file. i include the option
 				because it is occasionally useful to inspect the other data.  
+
+			load_empty_directories: if True, will assume that any empty directories were supposed to contain 
+				hdf5 files, and hence will create a stub for these. if False, the directories will be ignored.
+
+			silent: if True, will prevent debug info from being printed. 
+
+			index_by_timestep: if True, data is stored with index = t_0, ..., t_N where t_i are the N timesteps 
+				output for this data in the simulation. if False, the data is stored with index = 0 ... N independent 
+				of the timesteps. in either case the timesteps variable stores the values t_0 ... t_N.
 		'''
 	
 		if not os.path.exists( data_path ) : 
@@ -51,9 +62,14 @@ class OsirisDataContainer( object ) :
 
 		self.data_path = data_path 
 		self.load_whole_file = load_whole_file
+		self.load_empty_directories = load_empty_directories
+		self.silent = silent 
+		self.index_by_timestep = index_by_timestep
 
-		self.data = AttrDict() 
+		# data structures
+		self.data = RecursiveAttrDict() 
 		self.derived_data = AttrDict() 
+		self.has_empty_dir = False
 
 		# track all the indices that have data loaded 
 		# self.loaded_indices = set()
@@ -61,15 +77,24 @@ class OsirisDataContainer( object ) :
 
 
 
-	def load_indices( self, indices = None, timesteps = None, keys = None ) : 
+	def load_indices( self, indices = None, timesteps = None, keys = None, prune = 1 ) : 
 		
 		self.load_ms( indices, timesteps, keys ) 
 		self.load_timings()
+
+		if self.has_empty_dir : 
+			if not self.silent : 
+				print( 'INFO: pruning empty data branches' )
+			self.data.prune()	
+
+
+
 
 
 
 	def unload_indices( self, indices = None, timesteps = None, keys = None ) : 
 		... 
+
 
 
 	def load_ms( self,  indices = None, timesteps = None, keys = None ) : 
@@ -81,6 +106,7 @@ class OsirisDataContainer( object ) :
 
 		self.data.ms = AttrDict() 
 		self.recursively_load_dir( self.data.ms, ms_path )
+
 
 
 
@@ -98,11 +124,21 @@ class OsirisDataContainer( object ) :
 				self.recursively_load_dir( parent_dict[ key ], subdir )
 
 		# otherwise load files 
-		elif len( files ) > 0 : 
-			self.load_h5_files( parent_dict, directory ) 
-
 		else : 
-			print( 'WARNING: found empty directory: %s' % directory )
+			if len( files ) > 0 : 
+				self.load_h5_files( parent_dict, directory ) 
+
+			else : 	
+				self.has_empty_dir = True
+				if not self.silent : 
+					print( 'WARNING: found empty directory: %s' % directory )
+
+				if self.load_empty_directories : 
+					self.load_h5_files( parent_dict, directory )
+
+				# else : 
+				# 	curkey = 
+				# 	del self.parent_dict[ ] 
 
 
 
@@ -121,11 +157,17 @@ class OsirisDataContainer( object ) :
 
 			if not self.load_whole_file : 
 				data = data[ varname ]
-			
-			if slice_ is not None : 
-				data = data[ slice_ ] 
+		
+				# apply a slice if requested	
+				if slice_ is not None : 
+					data = data[ slice_ ] 
 
-			parent_dict[ timesteps[i] ] = data 
+			# add this data to the parent dictionary 
+			if self.index_by_timestep :
+				parent_dict[ timesteps[ i ] ] = data 
+			else : 
+				parent_dict[ i ] = data 
+
 
 		# print( 'in directory: %s' % directory )
 		# print( 'files: ' + str( files ) )
@@ -138,43 +180,12 @@ class OsirisDataContainer( object ) :
 
 
 	def __str__( self ) : 
-
-		ret = '' 
-
-		ret += attrdict2str( self.data, 0, '' )
-
-		return ret
+		return str( self.data ) 
 
 
 		
-	
-def attrdict2str( attrdict, depth, accumulated_str ) : 
-	
-	#accumulated_str = ''
-
-	# print( attrdict.keys() )
-
-	try : 
-		keys = sorted( attrdict.keys() )
-	except : 
-		return ''
-
-	for key in sorted( attrdict.keys() ):
-		
-		val = attrdict[ key ]
-
-		if isinstance( val, AttrDict ) : 
-			# print( k )
-			currline = '---- ' * depth + '%s\n' % key
-			# print( currline ) 
-			
-
-			accumulated_str += currline + attrdict2str( val, depth + 1, accumulated_str )
-
-	return accumulated_str
 
 
-	 
 		
 			
 # helper functions
@@ -195,7 +206,9 @@ def get_num_files( output_path ) :
 	num_files = len( glob.glob( output_path ) ) 
 	return num_files
 
-								   
+						
+
+
 
 
 
