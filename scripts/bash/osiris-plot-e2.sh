@@ -3,7 +3,7 @@
 basepath=$(dirname $0)
 base=$(basename $0 .sh)
 
-cmd="ipython $basepath/../python/$base.py $@"
+cmd="ipython $basepath/../python/$base.py -- $@"
 
 echo $cmd
 

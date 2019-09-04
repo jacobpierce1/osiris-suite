@@ -29,13 +29,28 @@ MS_PREFIX = '/MS'
 
 
 class OsirisDataContainer( object ) : 
+	'''
 
-	def __init__( self, data_path = None  ) : 
-		
+	'''
+
+
+	def __init__( self, data_path = None, load_whole_file = 0  ) : 
+		'''
+			data_path: path to parent directory containing all OSIRIS data (i.e. the directory)
+				containing the OSIRIS output directory MS).
+
+			load_whole_file: if 1, this will make the entire hdf5 get loaded for each file
+				instead of returning a handle to the hdf5 file accessed at the data. 
+				this does not add much overhead, but if you are only planning to access the data
+				and none of the metadata you don't need to access the whole file. i include the option
+				because it is occasionally useful to inspect the other data.  
+		'''
+	
 		if not os.path.exists( data_path ) : 
 			raise OSError( 'Error: the specified path does not exist: %s' % data_path )
 
 		self.data_path = data_path 
+		self.load_whole_file = load_whole_file
 
 		self.data = AttrDict() 
 		self.derived_data = AttrDict() 
@@ -61,6 +76,9 @@ class OsirisDataContainer( object ) :
 		ms_path = self.data_path + MS_PREFIX 
 		# pprint( list( os.walk (ms_path)) )
 
+		if not os.path.exists( ms_path ) : 
+			raise OSError( 'ERROR: the MS directory does not exist: %s' % ms_path)
+
 		self.data.ms = AttrDict() 
 		self.recursively_load_dir( self.data.ms, ms_path )
 
@@ -68,19 +86,8 @@ class OsirisDataContainer( object ) :
 
 	def recursively_load_dir( self, parent_dict, directory ) : 
 
-		# for parent, dirs, files in os.walk( directory ) : 
-
-		#	parent_dict[ ]
-
-			# key = os.ms_path.normpath( os.path.basename( 
-
-		# subdirs = os.listdir( directory ) 
 		curpath, subdir_names, files = next( os.walk( directory ) ) 
 
-
-		# print( subdir_names ) 
-
-		# load all directories if possible 
 		if len( subdir_names ) > 0 : 
 			for subdir_name in subdir_names : 
 				# basename = os.path.basename( os.path.normpath( subdir ) ).lower() 
@@ -110,7 +117,10 @@ class OsirisDataContainer( object ) :
 
 		for i in range( len( files ) ) : 
 			
-			data = h5py.File( files[i], 'r')[ varname ]
+			data = h5py.File( files[i], 'r')
+
+			if not self.load_whole_file : 
+				data = data[ varname ]
 			
 			if slice_ is not None : 
 				data = data[ slice_ ] 
