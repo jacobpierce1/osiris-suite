@@ -1,2 +1,3 @@
 from .osiris_data_container import  OsirisDataContainer
-from .helper_classes import AttrDict, RecursiveAttrDict  
+from .input_deck_manager import InputDeckManager
+from .helper_classes import AttrDict, RecursiveAttrDict, OsirisSuiteError

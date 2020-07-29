@@ -1,20 +1,18 @@
 import h5py
 
 recursive = 1 
-tab_step = 2 
-
-def scan_hdf5( opened_h5file ) : 
-	scan_node( opened_h5file )
+step = 2 
 
 
-def scan_node(g, tabs=0):
+# print all datasets 
+
+def scan_hdf5( group ) : 
 	
-	print(' ' * tabs, g.name)
-	
-	for k, v in g.items():
+	for key, val in group.items():
 
-		if isinstance(v, h5py.Dataset):
-			print(' ' * tabs + ' ' * tab_step + ' -', v.name)
+		if isinstance(val, h5py.Dataset):
+			# print(' ' * num_spaces + '---> ' + v.name)
+			print( val.name )
 
-		elif isinstance(v, h5py.Group) and recursive:
-			scan_node(v, tabs=tabs + tab_step)
+		elif isinstance( val, h5py.Group ) :
+			scan_hdf5( val ) 

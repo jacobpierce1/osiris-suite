@@ -1,0 +1,27 @@
+#!/bin/bash 
+
+# follow symlink: get path of original file 
+# curdir="$(cd "$(dirname "$0")" && pwd)"
+curdir="$(dirname "$(readlink -f "$0")")"
+
+# curdir=$(dirname $0)
+
+# echo "$@"
+
+ipython "$curdir"/osplot.py -- "$@"
+
+# plotters_directory=$(dirname $0)/osiris-plotters
+
+# if [ $# -eq 0 ]
+# then
+# 	echo "Usage: osplot <plotter.py> <args> "
+# 	echo "Available plottters: " 
+# 	# echo $(basename $0) 
+# 	ls $plotters_directory
+
+# 	exit 0 
+# fi
+
+# plotter=$1
+
+# ipython $plotters_directory/$plotter

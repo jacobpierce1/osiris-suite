@@ -10,6 +10,14 @@ import sys
 # x.a --> returns 2 
 # see https://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute
 
+
+
+class OsirisSuiteError( Exception ) : 
+    ... 
+
+
+
+
 class AttrDict( dict ):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
@@ -26,15 +34,22 @@ class RecursiveAttrDict( AttrDict ) :
         this is a subclass of the attrdict which gives support for recursive attrdict operations  
     '''
                 
-    def __str__( self, depth, accumulated_str, print_vals = False ) : 
-        return self.attrdict2str( self, 0, '', print_vals )
+    # def __str__( self, depth, accumulated_str, print_vals = False ) : 
+    def __str__( self, print_vals = False ) : 
+        return attrdict2str( self, '', [''], print_vals )[0]
 
 
     def prune( self, print_status = False ) : 
-        recursively_prune_attrdict( self, None, None, print_status )
+        return recursively_prune_attrdict( self, None, None, print_status )
+
+
+    def find_subtree( self, subtree_name ) : 
+        return recursively_find_subtree( subtree_name, self )
 
      
-def attrdict2str( attrdict, depth, accumulated_str, print_vals ) : 
+
+
+def attrdict2str( attrdict, dash_str, accumulated_str, print_vals ) : 
 
 
     #accumulated_str = ''
@@ -43,26 +58,47 @@ def attrdict2str( attrdict, depth, accumulated_str, print_vals ) :
 
     try : 
         keys = sorted( attrdict.keys() )
-        print( keys ) 
+        # print( keys ) 
     except : 
         return ''
 
-    for key in sorted( attrdict.keys() ):
+
+    for key in keys : 
+
+        # print ('adding key: ' + key )
         
         val = attrdict[ key ]
 
-        if isinstance( val, AttrDict ) : 
-            # print( k )
-            currline = '---- ' * depth + '%s\n' % key
-            
-            
-    #               currline += '\n'
+        # print( type( val ) ) 
 
-            accumulated_str += currline + attrdict2str( val, depth + 1, accumulated_str )
+        currline = dash_str + ' ' +  key + '\n'
+
+        accumulated_str[0] += currline 
+
+        if isinstance( val, AttrDict ) : 
+
+            # print( 'adding currline: '  + currline )
+            
+            # accumulated_str_prev  = accumulated_str
+
+            # print( 'added currline: '  + currline )
+
+            # print( 'accumulated_str: ' + accumulated_str[0] )
+
+            # accumulated_str += attrdict2str( val, depth + 1, accumulated_str, print_vals )
+
+            new_dash_str =  ( ' ' * ( len(dash_str) + 1 ) 
+                                + '-' * len( key ) 
+                                + '->' )
+
+            attrdict2str( val, new_dash_str, accumulated_str, print_vals )
+
+            # print( 'new accumulated_str: ' + accumulated_str[0] )
 
         else : 
             if print_vals :
                 accumulated_str += str( val )
+
 
     return accumulated_str
 
@@ -81,7 +117,9 @@ def recursively_prune_attrdict( current_attrdict, current_key,
     # this avoids RuntimeError: dictionary changed size during iteration
 
     for key in list( current_attrdict.keys() ) : 
+        
         val = current_attrdict[ key ]
+
         if isinstance( val, AttrDict ) : 
             recursively_prune_attrdict( val, key, current_attrdict, print_status )
     
@@ -90,5 +128,32 @@ def recursively_prune_attrdict( current_attrdict, current_key,
 
         if print_status : 
             print( 'Pruning key: %s' % current_key )
+
         del parent_attrdict[ current_key ] 
+
+
+
+def recursively_find_subtree( subtree_name, current_dict ) :
+    
+    if current_dict is None : 
+        current_dict = self.data
+
+    for name, subdict in current_dict.items() : 
+
+        if not isinstance( subdict, AttrDict ) : 
+            continue 
+
+        # return branch if we found it
+        if name == subtree_name : 
+            return subdict 
+
+        # otherwise search all subtrees  
+        else : 
+            ret = recursively_find_subtree( subtree_name, subdict )
+
+            if ret is not None : 
+                return ret
+
+    # only reached if no matching subtree is found. 
+    return None 
 
