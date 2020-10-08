@@ -23,6 +23,7 @@ class InputDeckManager( object ) :
 			self.read() 
 
 
+
 	# read an input deck 
 	def read( self, path = None ) : 
 
@@ -69,13 +70,30 @@ class InputDeckManager( object ) :
 				# because of the challenges this introduces 
 				# in conjuction with how rarely this would be useful
 
+				bool_strs = [ '.true.', '.false.' ]
+
 				if is_arr : 
-					try : 
-						metadata_val = np.array( metadata_val_split, dtype = float )
-					except : 
-						metadata_val = np.array( metadata_val_split, dtype = str )
+
+					if metadata_val_split[0] in bool_strs :
+
+						true_mask = np.array( [ b == '.true.' for b in metadata_val_split ] )
+	
+						metadata_val = np.zeros_like( metadata_val_split, dtype = bool )
+						metadata_val[ true_mask ] = True
+						metadata_val[ ~true_mask ] = False
+
+					else : 
+						try : 
+							metadata_val = np.array( metadata_val_split, dtype = float )
+						except : 
+							metadata_val = np.array( metadata_val_split, dtype = str )
 
 				else : 
+
+					if metadata_val in bool_strs : 
+
+						metadata_val = True if (metadata_val == '.true.' ) else False
+
 					try : 
 						metadata_val = float( metadata_val )
 					except : 
@@ -89,6 +107,7 @@ class InputDeckManager( object ) :
 	def write( self, path ) : 
 
 		... 
+
 
 
 	def get_metadata( self, key, occurrence = 0, truncate_strings = 1 ) : 
@@ -108,6 +127,39 @@ class InputDeckManager( object ) :
 		idx = indices[ occurrence ] 
 
 		return self.metadata[ idx ] 
+
+
+
+	def __getitem__( self, attr_and_occurrence ) :
+
+		if isinstance( attr_and_occurrence, tuple ) : 
+			attr, occurrence = attr_and_occurrence
+		else : 
+			attr = attr_and_occurrence
+			occurrence = 0
+
+		return self.get_metadata( attr, occurrence )
+
+
+
+	def __setitem__( self, attr_and_occurrence, val ) : 
+
+		if isinstance( attr_and_occurrence, tuple ) : 
+			attr, occurrence = attr_and_occurrence
+		else : 
+			attr = attr_and_occurrence
+			occurrence = 0
+
+		if key not in self.keys :
+			raise OsirisSuiteError( 
+				'ERROR: key is not in input deck: %s' % str(key) )
+
+		# get indices which match key 
+		indices = [ i for i, x in enumerate( self.keys ) if x == key ]
+
+		idx = indices[ occurrence ] 
+
+		self.metadata[ idx ] = val 
 
 
 

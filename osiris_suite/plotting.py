@@ -27,7 +27,7 @@ def ffmpeg_combine( plotdir, movie_name, duration ):
 
 	# frame_rate = min( 1, nfiles // duration )
 	frame_rate = nfiles / duration
-	command = 'ffmpeg -r %f -i %s%%03d.png -vcodec mpeg4 -y %s' % ( 
+	command = 'ffmpeg -r %f -i %s%%*.png -vcodec libx264 -crf 25 -pix_fmt yuv420p -y %s' % ( 
     	frame_rate, plotdir, movie_name ) 
 	print( command ) 
 	os.system( command )
@@ -48,6 +48,10 @@ def check_leaf_timesteps( leaves ) :
 	indices = np.arange( len( timesteps ) )
 
 	for leaf in leaves : 
+		
+		if leaf is None : 
+			continue 
+		
 		try : 
 			success &= np.allclose( timesteps, leaf.timesteps ) 
 		except : 
@@ -59,6 +63,9 @@ def check_leaf_timesteps( leaves ) :
 
 
 def plot_image_raw( fig, ax, leaf, index, cmap, title ) : 
+
+	if leaf is None : 
+		return 
 
 	data_mgr = leaf.file_managers[ index ]
 	data_mgr.load() 
@@ -112,11 +119,6 @@ def plot_image( fig, ax, data, cmap, title, axes, aspect = None ) :
 
 
 
-
-
-
-
-
 def make_frame_raw( osdata, shape, leaves, 
 					titles = None, cmaps = None, 
 					suptitle = '', 
@@ -126,9 +128,16 @@ def make_frame_raw( osdata, shape, leaves,
 	N, M = shape 
 
 	if titles is None : 
-		titles = [ [ leaves[i][j].file_managers[0].data_key 
-				for j in range(M) ]
-				for i in range(N) ]
+
+		titles = np.empty( shape, dtype = str )
+
+		for j in range(M): 
+			for i in range(N) : 
+
+				if leaves[i][j] is None : 
+					continue
+
+				titles[i,j] = leaves[i][j].file_managers[0].data_key 
 
 	if cmaps is None : 
 		cmaps = [[colorcet.m_rainbow 
@@ -174,14 +183,33 @@ def make_frame_raw( osdata, shape, leaves,
 
 
 
-def make_movie_raw( osdata, shape, leaves, titles = None, cmaps = None, 
-					suptitle = '', 
-					figsize = None, subplots_adjust = None,
-					savedir = None, modifier_function = None,
-					 nproc = 1, stride = 1, duration = 10,
-					 print_progress = True,
-					 show = 0 ) : 
+def make_movie( osdata, shape, leaves, 
+				titles = None, cmaps = None, 
+				suptitle = '', 
+				figsize = None, subplots_adjust = None,
+				savedir = None, modifier_function = None,
+				nproc = 1, nframes = 20, duration = 5,
+				print_progress = True,
+				show = 0 ) : 
 	
+	'''
+	generate plots and make a movie for a given set of OSIRIS data
+
+	inputs: 
+		osdata: already-loaded OsirisDataContainer
+		...
+		subplots_adjust: ( width, height ) to adjust plot spacing
+		modifier_function: None or function with signature ( fig, axarr )
+			which may modify fig and axarr at each timestep before plot is saved.
+		nproc: number of processes to use. memory may be an issue. currently
+			only multiprocessing within a single node is supported. 
+		nframes: number of frames to use 
+		duration: duration of output movie 
+		print_progress: print messages about number of frames generated
+		show: show the first plot and quit; don't generate other plots
+			or save movie. 
+	'''
+
 	if not savedir : 
 		raise OsirisSuiteError( 'ERROR: savedir must be specified' )
 
@@ -196,7 +224,13 @@ def make_movie_raw( osdata, shape, leaves, titles = None, cmaps = None,
 	frame_savedir = savedir + '/frames/'
 	os.makedirs( frame_savedir, exist_ok = 1 )
 
-	indices = np.arange( len( leaves[0][0].timesteps ), step = stride )
+	# this is a bug waiting to happen 
+	# there may not be enough frames 
+	
+	indices = np.linspace( 0, len( leaves[0][0].timesteps ), nframes, 
+							endpoint = False, dtype = int )
+
+	print( indices ) 
 
 	if print_progress : 
 		print( "Making movie..." )
@@ -216,13 +250,17 @@ def make_movie_raw( osdata, shape, leaves, titles = None, cmaps = None,
 		if modifier_function is not None : 
 			modifier_function( fig, axarr ) 
 
-		path = frame_savedir + '/%03d' % index
+		path = frame_savedir + '/%03d' % i
 	
 		if show : 
 			plt.show()
 		
 		plt.savefig( path, dpi = 400 ) 
 		plt.close() 
+
+	if show : 
+		handle_index( 0 )
+		return 
 
 	pool = pathos.multiprocessing.ProcessingPool( nproc ) 
 

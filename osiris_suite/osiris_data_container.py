@@ -87,6 +87,18 @@ class H5FileManager( object ) :
 		return np.array( [ axes[k] for k in keys ] )
 
 
+	def unpack( self ) : 
+
+		self.load() 
+
+		data = self.data
+		axes = self.axes 
+
+		self.unload
+
+		return data, axes 
+
+
 	def __bool__( self ) : 
 		return self.file is None 
 
