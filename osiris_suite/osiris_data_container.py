@@ -269,7 +269,6 @@ class OsirisDataContainer( object ) :
 		varname = os.path.basename( os.path.normpath( directory ) )
 
 		parent_dict[ 'timesteps' ] = timesteps 
-		# parent_dict[ 'file_names' ] = files
 		parent_dict[ 'file_managers' ] = [ None for i in range( len( timesteps ) ) ]
 
 		# enable negative indexing in the style of numpy arrays
