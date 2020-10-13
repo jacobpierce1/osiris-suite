@@ -64,13 +64,13 @@ e1_plot_mgr = raw_osdata_TS2D_plot_mgr(
 	title = 'E1' )
 
 e2_plot_mgr = raw_osdata_TS2D_plot_mgr( 
-	osdata.data.ms.fld.e1, 
+	osdata.data.ms.fld.e2, 
 	cmap = colorcet.m_CET_D2, 
 	logscale = 0, 
 	title = 'E2' )
 
 e3_plot_mgr = raw_osdata_TS2D_plot_mgr( 
-	osdata.data.ms.fld.e1, 
+	osdata.data.ms.fld.e3, 
 	cmap = colorcet.m_CET_D2, 
 	logscale = 0, 
 	title = 'E3' )
