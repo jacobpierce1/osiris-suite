@@ -109,7 +109,7 @@ profile
 
   num_x = 4,
   x(1:4,1) = 0, 100, 150, 200,
-  fx(1:4,1) = 0, 1, 1, 0
+  fx(1:4,1) = 0, 1, 1, 0,
 }
 
 spe_bound
@@ -124,7 +124,7 @@ diag_species
   ndump_fac_pha = 1,
   ndump_fac_ene = 1,
   reports = "charge", 
-  phasespaces = "p2x1", "p1"
+  phasespaces = "p2x1", "p1",
 }
 
 zpulse

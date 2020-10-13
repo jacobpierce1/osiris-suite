@@ -91,22 +91,26 @@ class InputDeckManager( object ) :
 				else : 
 
 					if metadata_val in bool_strs : 
-
 						metadata_val = True if (metadata_val == '.true.' ) else False
 
-					try : 
-						metadata_val = float( metadata_val )
-					except : 
-						... 
+					else : 
+						try : 
+							metadata_val = float( metadata_val )
+						except :
+							# do nothing since it's already a string  
+							... 
 
 				cur_metadata[ metadata_key ] = metadata_val 
 
+				# print( metadata_key ) 
+				# print( metadata_val ) 
 
 
 	# write the data into an input deck
 	def write( self, path ) : 
 
-		... 
+		with open( path, 'w' ) as f : 
+			f.write( str( self ) )
 
 
 
@@ -172,11 +176,18 @@ class InputDeckManager( object ) :
 		for i in range( n ) : 
 
 			s += self.keys[i] 
-			s += '\n'
+			s += '\n{\n'
 
 			for key, val in self.metadata[i].items() : 
 
-				s += '\t%s = %s\n' % ( str(key), str(val) )
+				if isinstance( val, np.ndarray ) : 
+					val_str = array_to_string( val )
+				else : 
+					val_str = val_to_string( val ) 
+
+				s += '\t%s = %s\n' % ( str(key), val_str )
+
+			s += '}'
 
 			s += '\n\n'
 
@@ -185,11 +196,32 @@ class InputDeckManager( object ) :
 
 
 
-def string_to_array( string ) : 
+# def string_to_array( string ) : 
 
-	...
+# 	...
 
 
 def array_to_string( arr ) : 
 
-	... 
+	ret = '' 
+
+	for x in arr : 
+		ret += val_to_string( x ) 
+		ret += ' '
+		# ret += ','
+
+	return ret 
+
+
+
+def val_to_string( val ) : 
+
+	if isinstance( val, (bool, np.bool_ ) ) : 
+		ret = '.true.' if val else '.false'
+
+	else : 
+		ret = str( val ) 
+
+	ret += ','
+
+	return ret 

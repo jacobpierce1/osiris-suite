@@ -73,6 +73,7 @@ class Plotter2D( object ) :
 
 		norm = None
 		if self.logscale : 
+			data = np.clip( data, 1e-10, None )
 			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
 
 		im = ax.imshow( data, cmap = self.cmap, interpolation = 'bilinear', 
@@ -92,8 +93,8 @@ class Plotter2D( object ) :
 		# cb = fig.colorbar( im, cax = cax ) # format = '%.1e' )
 		# cb = add_colorbar( im ) 
 
-		cb.formatter.set_powerlimits((0, 0))
-		cb.update_ticks()
+		# cb.formatter.set_powerlimits((0, 0))
+		# cb.update_ticks()
 
 		ax.set_title( self.title )
 		ax.ticklabel_format( style = 'sci')
@@ -258,9 +259,17 @@ def make_frame( index, osdata, timesteps,
 
 	fig.suptitle( suptitle )
 
+	# make all plots 
 	for i in range( N ) : 
 		for j in range( M ) :
-			plot_mgr_arr[i][j].plot( axarr[i,j], index ) 
+			
+			plot_mgr = plot_mgr_arr[i][j]
+			
+			if plot_mgr is not None : 
+				plot_mgr.plot( axarr[i,j], index )
+
+			else : 
+				fig.delaxes( axarr[i,j] ) 
 
 	if subplots_adjust is not None : 
 		hspace, wspace = subplots_adjust
@@ -280,7 +289,7 @@ def make_TS_movie(  osdata, timesteps,
 					savedir = None, global_modifier_function = None,
 					nproc = 1, nframes = 20, duration = 5,
 					print_progress = True,
-					show = 0 ) : 
+					show_index = None ) : 
 	
 	'''
 	generate plots and make a movie for a given set of OSIRIS data
@@ -308,25 +317,16 @@ def make_TS_movie(  osdata, timesteps,
 	# if not success : 
 	# 	raise OsirisSuiteError( 'ERROR: leaf timesteps are not aligned')
 
+	show = show_index is not None
+
 	if show : 
 		nproc = 1
 
 	frame_savedir = savedir + '/frames/'
 	os.makedirs( frame_savedir, exist_ok = 1 )
 
-	# this is a bug waiting to happen 
-	# there may not be enough frames 
-	
-	# indices = np.linspace( 0, len( plot_mgr_arr[0][0].timesteps ), nframes, 
-	# 						endpoint = False, dtype = int )
-
-	spacing = int( len( timesteps ) / nframes )  # truncate 
+	spacing = int( len( timesteps ) / nframes + 1 )  # truncate 
 	indices = timesteps[ :: spacing ]
-
-	print(timesteps)
-	print( len(timesteps))
-	print(nframes)
-	print(spacing)
 
 	print( 'INFO: plotting indices: ' + str( indices ) ) 
 
@@ -358,7 +358,7 @@ def make_TS_movie(  osdata, timesteps,
 		plt.close() 
 
 	if show : 
-		handle_index( 0 )
+		handle_index( show_index )
 		return 
 
 	pool = pathos.multiprocessing.ProcessingPool( nproc ) 

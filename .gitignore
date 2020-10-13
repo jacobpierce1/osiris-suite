@@ -5,3 +5,4 @@
 *.DS_Store
 **/computations/**
 **/examples-output/**
+.local/

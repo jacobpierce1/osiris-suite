@@ -13,11 +13,6 @@ from .input_deck_manager import InputDeckManager
 
 
 
-
-
-
-
-
 class H5FileManager( object ) : 
 
 	def __init__( self, path = None, data_key = None ) : 

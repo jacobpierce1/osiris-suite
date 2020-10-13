@@ -1,3 +1,10 @@
+# typical usage would be to copy and paste this script.
+# my typical workflow involves examining variations of similar 
+# simulations. in that case, i will write a script like this 
+# which plots the useful plots for that particular simulation mode,
+# then repeatedly generate movies with the same plots for comparison.
+
+
 from osiris_suite import OsirisDataContainer
 from osiris_suite.plotting import *
 from osiris_suite.computations import compute_fft_2d
@@ -139,6 +146,6 @@ osiris_suite.plotting.make_TS_movie( 	osdata, timesteps,
 										global_modifier_function = None,
 										subplots_adjust = subplots_adjust,
 										savedir = './examples-output/make-movie/',
-										show = 0,
+										# show_index = 20,
 										nproc = 12,
 										duration = 5 )
