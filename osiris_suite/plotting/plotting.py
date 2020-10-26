@@ -325,7 +325,7 @@ def make_TS_movie(  osdata, timesteps,
 	frame_savedir = savedir + '/frames/'
 	os.makedirs( frame_savedir, exist_ok = 1 )
 
-	spacing = int( len( timesteps ) / nframes + 1 )  # truncate 
+	spacing = int( len( timesteps ) / nframes )  # truncate 
 	indices = timesteps[ :: spacing ]
 
 	print( 'INFO: plotting indices: ' + str( indices ) ) 
