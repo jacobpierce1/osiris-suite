@@ -23,6 +23,12 @@ class InputDeckManager( object ) :
 			self.read() 
 
 
+	def copy( self ) : 
+		copy = type( self )()
+		copy.keys = self.keys.copy()
+		copy.metadata = [ x.copy() for x in self.metadata ]
+		return copy 
+
 
 	# read an input deck 
 	def read( self, path = None ) : 
@@ -83,10 +89,18 @@ class InputDeckManager( object ) :
 						metadata_val[ ~true_mask ] = False
 
 					else : 
+						# try int array
 						try : 
-							metadata_val = np.array( metadata_val_split, dtype = float )
+							metadata_val = np.array( metadata_val_split, dtype = int )
 						except : 
-							metadata_val = np.array( metadata_val_split, dtype = str )
+							# try float array
+							try : 
+								metadata_val = np.array( metadata_val_split, dtype = float )
+							# try string array
+							except : 
+								for i in range( len( metadata_val_split)) : 
+									metadata_val_split[i] = metadata_val_split[i].replace( '"', '' )
+								metadata_val = np.array( metadata_val_split, dtype = str )
 
 				else : 
 
@@ -94,12 +108,17 @@ class InputDeckManager( object ) :
 						metadata_val = True if (metadata_val == '.true.' ) else False
 
 					else : 
+						# try int 
 						try : 
-							metadata_val = float( metadata_val )
+							metadata_val = int( metadata_val )
 						except :
-							# do nothing since it's already a string  
-							... 
-
+							# try float
+							try :
+								metadata_val = float( metadata_val )
+							# last case: do nothing since it's already a string  
+							except : 
+								metadata_val = metadata_val.replace( '"', '' )
+							
 				cur_metadata[ metadata_key ] = metadata_val 
 
 				# print( metadata_key ) 
@@ -134,15 +153,35 @@ class InputDeckManager( object ) :
 
 
 
-	def __getitem__( self, attr_and_occurrence ) :
+	def __getitem__( self, attr_occurrence_val_tuple ) :
 
-		if isinstance( attr_and_occurrence, tuple ) : 
-			attr, occurrence = attr_and_occurrence
+		x = attr_occurrence_val_tuple
+
+		if isinstance( x, tuple ) : 
+			attr = x[0] 
+
+			if len( x ) > 1 : 
+				occurrence = x[1] 
+			else : 
+				occurrence = 0 
+
+			if len(x) > 2 : 
+				val = x[2] 
+			else : 
+				val = None 
+
 		else : 
-			attr = attr_and_occurrence
+			attr = x
 			occurrence = 0
+			val = None
 
-		return self.get_metadata( attr, occurrence )
+		metadata = self.get_metadata( attr, occurrence )
+
+		if val is None : 
+			return metadata
+
+		else : 
+			return metadata[ val ]
 
 
 
@@ -217,7 +256,10 @@ def array_to_string( arr ) :
 def val_to_string( val ) : 
 
 	if isinstance( val, (bool, np.bool_ ) ) : 
-		ret = '.true.' if val else '.false'
+		ret = '.true.' if val else '.false.'
+
+	elif isinstance( val, str ) : 
+		ret = '"' + str( val ) + '"'
 
 	else : 
 		ret = str( val ) 
