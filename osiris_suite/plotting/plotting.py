@@ -90,14 +90,20 @@ class Plotter2D( object ) :
 		# cax = fig.add_axes([ax.get_position().x1+0.005,ax.get_position().y0,0.02,ax.get_position().height])
 
 		cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04 )
+
+		# cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04, 
+		# 					format =  '%.0e' )
+
+
 		# cb = fig.colorbar( im, cax = cax ) # format = '%.1e' )
 		# cb = add_colorbar( im ) 
 
-		# cb.formatter.set_powerlimits((0, 0))
+		if not self.logscale :
+			cb.formatter.set_powerlimits((0, 0))
 		# cb.update_ticks()
 
 		ax.set_title( self.title )
-		ax.ticklabel_format( style = 'sci')
+		# ax.ticklabel_format( style = 'sci')
 
 
 
@@ -144,7 +150,8 @@ class Plotter1D( object ) :
 		if self.logy : 
 			ax.set_yscale( 'log' )
 
-		# ax.ticklabel_format( style = 'sci')
+		# else : 
+		# 	ax.ticklabel_format( style = 'sci')
 
 		ax.legend( loc = 'best' )
 
@@ -325,10 +332,16 @@ def make_TS_movie(  osdata, timesteps,
 	frame_savedir = savedir + '/frames/'
 	os.makedirs( frame_savedir, exist_ok = 1 )
 
+	timesteps = np.asarray( timesteps )
 	spacing = int( len( timesteps ) / nframes )  # truncate 
-	indices = timesteps[ :: spacing ]
+	# indices = timesteps[ :: spacing ]
+	indices = spacing * np.arange( nframes, dtype = int )
 
 	print( 'INFO: plotting indices: ' + str( indices ) ) 
+	print( 'INFO: corresponding timesteps: ' + str( timesteps[ indices ] ))
+	print( len( timesteps ) )
+	print( spacing)  
+
 
 	if print_progress : 
 		print( "Making movie..." )
