@@ -36,8 +36,11 @@ class InputDeckManager( object ) :
 		if path is None : 
 			path = self.path 
 
-		with open( self.path ) as f : 
-			text = f.read()
+		try : 
+			with open( self.path ) as f : 
+				text = f.read()
+		except :
+			raise OsirisSuiteError( 'ERROR: unable to open input deck: %s' % self.path )
 
 		self.keys = []
 		self.metadata = []
@@ -99,7 +102,7 @@ class InputDeckManager( object ) :
 							# try string array
 							except : 
 								for i in range( len( metadata_val_split)) : 
-									metadata_val_split[i] = metadata_val_split[i].replace( '"', '' )
+									metadata_val_split[i] = metadata_val_split[i].strip( ' ' ).replace( '"', '' )
 								metadata_val = np.array( metadata_val_split, dtype = str )
 
 				else : 
@@ -232,6 +235,21 @@ class InputDeckManager( object ) :
 
 		return s 
 
+
+	def num_occurrences( self, key ) : 
+
+		# get indices which match key 
+		indices = [ i for i, x in enumerate( self.keys ) if x == key ]
+
+		return len( indices ) 
+
+
+	# utilities 
+	def get_abs_times( self, indices ) : 
+		
+		dt = self[ 'time_step' ][ 'dt' ]
+		ndump = self[ 'time_step' ][ 'ndump' ]
+		return dt * ndump * np.asarray( indices ) 
 
 
 

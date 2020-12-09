@@ -76,7 +76,7 @@ class Plotter2D( object ) :
 			data = np.clip( data, 1e-10, None )
 			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
 
-		im = ax.imshow( data, cmap = self.cmap, interpolation = 'bilinear', 
+		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
 						origin = 'lower', aspect = aspect, extent = extent,
 						norm = norm )
 
@@ -101,6 +101,8 @@ class Plotter2D( object ) :
 		if not self.logscale :
 			cb.formatter.set_powerlimits((0, 0))
 		# cb.update_ticks()
+
+		# print( 'setting title: ' + self.title )
 
 		ax.set_title( self.title )
 		# ax.ticklabel_format( style = 'sci')
@@ -273,8 +275,8 @@ def make_frame( index, osdata, timesteps,
 			plot_mgr = plot_mgr_arr[i][j]
 			
 			if plot_mgr is not None : 
-				plot_mgr.plot( axarr[i,j], index )
-
+				plot_mgr.plot( axarr[i,j], index)
+			
 			else : 
 				fig.delaxes( axarr[i,j] ) 
 
@@ -290,10 +292,13 @@ def make_frame( index, osdata, timesteps,
 
 
 def make_TS_movie(  osdata, timesteps,
-					shape, plot_mgr_arr, 
+					plot_mgr_arr, 
 					suptitle = '', 
 					figsize = None, subplots_adjust = None,
-					savedir = None, global_modifier_function = None,
+					savedir = None, 
+					frame_startup_function = None,
+					frame_cleanup_function = None,
+					global_modifier_function = None,
 					nproc = 1, nframes = 20, duration = 5,
 					print_progress = True,
 					show_index = None ) : 
@@ -326,6 +331,8 @@ def make_TS_movie(  osdata, timesteps,
 
 	show = show_index is not None
 
+	shape = (len( plot_mgr_arr), len(plot_mgr_arr[0]))
+
 	if show : 
 		nproc = 1
 
@@ -338,10 +345,7 @@ def make_TS_movie(  osdata, timesteps,
 	indices = spacing * np.arange( nframes, dtype = int )
 
 	print( 'INFO: plotting indices: ' + str( indices ) ) 
-	print( 'INFO: corresponding timesteps: ' + str( timesteps[ indices ] ))
-	print( len( timesteps ) )
-	print( spacing)  
-
+	print( 'INFO: corresponding timesteps: ' + str( osdata.input_deck.get_abs_times( timesteps[ indices ] )) )
 
 	if print_progress : 
 		print( "Making movie..." )
@@ -354,6 +358,9 @@ def make_TS_movie(  osdata, timesteps,
 		if print_progress : 
 			print( "%d / %d" % ( i, len( indices ) ) )
 
+		if frame_startup_function is not None : 
+			frame_startup_function( index )
+
 		fig, axarr = make_frame( index,
 								 osdata, timesteps,
 								 shape, plot_mgr_arr, 
@@ -362,13 +369,18 @@ def make_TS_movie(  osdata, timesteps,
 		if global_modifier_function is not None : 
 			global_modifier_function( fig, axarr ) 
 
+		if frame_cleanup_function is not None : 
+			frame_cleanup_function( index )
+
 		path = frame_savedir + '/%03d' % i
-	
+		
 		if show : 
 			plt.show()
-		
-		plt.savefig( path, dpi = 400 ) 
-		plt.close() 
+
+		else : 
+			plt.savefig( path, dpi = 400 ) 
+			plt.close() 
+
 
 	if show : 
 		handle_index( show_index )
