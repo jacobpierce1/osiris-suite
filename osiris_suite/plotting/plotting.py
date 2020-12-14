@@ -72,7 +72,10 @@ class Plotter2D( object ) :
 		extent = [axes[0][0], axes[0][1], axes[1][0], axes[1][1] ]
 
 		norm = None
+		
 		if self.logscale : 
+
+			data = np.abs( data )
 			data = np.clip( data, 1e-10, None )
 			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
 
@@ -386,6 +389,7 @@ def make_TS_movie(  osdata, timesteps,
 		handle_index( show_index )
 		return 
 
+	print( 'nproc: ', nproc ) 
 	pool = pathos.multiprocessing.ProcessingPool( nproc ) 
 
 	pool.map( handle_index, range( len( indices ) ) )	
