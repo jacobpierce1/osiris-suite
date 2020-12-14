@@ -26,27 +26,32 @@ print( osdata )
 # how to unpack data indexed at timesteps (i.e. in the MS directory):
 e1 = osdata.data.ms.fld.e1
 timesteps = e1.timesteps 
+abs_times = osdata.input_deck.get_abs_times( timesteps ) 
 
 print( 'INFO: available timesteps:')
 print( timesteps ) 
+
+print( 'corresponding abs times: ')
+print( abs_times ) 
 
 # let's pull out data at this index:
 # get handle to class wrapping corresponding file 
 index = 10
 
 data, axes = e1.file_managers[ index ].unpack() 
+abs_time = abs_times[ index ] 
 
 fig, axarr = plt.subplots( 1, 2 ) 
 ax = axarr[0]
-ax.imshow( data, cmap = colorcet.m_CET_D3 ) 
-ax.set_title( 'E1 (Easy money!)' )
+ax.imshow( data.T, cmap = colorcet.m_CET_D3 ) 
+ax.set_title( r'E1 at t = %.2f $\omega_{pe}^{-1}$' % abs_time )
 
 # how to access hist data 
 electron_ke_data = osdata.data.hist.par01_ene[  'KinEnergy' ]
 electron_ke_times = osdata.data.hist.par01_ene[ 'Time' ]
 ax = axarr[1]
 ax.plot( electron_ke_times, electron_ke_data )
-ax.set_title( 'Electron KE vs. Time \n(Full send!)')
+ax.set_title( 'Electron KE vs. Time')
 
 
 # how to access timing data: 
@@ -68,8 +73,5 @@ timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
 dt = timestep_metadata[ 'dt' ]
 ndump = timestep_metadata[ 'ndump' ]
 
-abs_times = np.array( timesteps ) * dt * ndump
-
-print( 'abs_times: ' + str( abs_times ) )
 
 plt.show() 

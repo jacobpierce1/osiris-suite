@@ -1,10 +1,3 @@
-# typical usage would be to copy and paste this script.
-# my typical workflow involves examining variations of similar 
-# simulations. in that case, i will write a script like this 
-# which plots the useful plots for that particular simulation mode,
-# then repeatedly generate movies with the same plots for comparison.
-
-
 from osiris_suite import OsirisDataContainer
 from osiris_suite.plotting import *
 from osiris_suite.computations import compute_fft_2d
@@ -104,13 +97,6 @@ energy_plot_mgr = PlotManager(
 						 title = 'Total energy vs. time',
 						 logy = 1 ) )
 
-# field_energy_plotter = make_field_energy_plot 
-
-# raw_osdata_TC1D_plot_mgr( 
-# 	)
-# osdata.data.hist.fld_ene
-
-
 
 
 plot_mgr_arr = \
@@ -128,8 +114,9 @@ plot_mgr_arr = \
 
 def global_modifier_function( fig, axarr ) : 
 
-	axarr[0,0].set_ylabel( 'Validated Data' )
-	axarr[1,0].set_ylabel( 'Test Data' ) 
+	axarr[0,0].set_ylabel( 'Spatial grid Data' )
+	axarr[1,0].set_ylabel( 'Other data' ) 
+
 
 # parameters to space the plots. fiddle with them until the plots 
 # are spaced properly on your screen. 
@@ -138,14 +125,21 @@ subplots_adjust = (0.2, 0.5)
 # could change timesteps here. a linear 
 timesteps = osdata.data.ms.fld.e1.timesteps 
 
+if len( timesteps ) <= 20 : 
+	nframes = len( timesteps ) 
+else : 
+	nframes = 20 
+
+
+
 # when debugging, set the parameter show = 1 and keep killing the 
 # program / modifying the inputs until you like it; then set show = 0
 # to make all plots and generate the movie. 
 osiris_suite.plotting.make_TS_movie( 	osdata, timesteps, 
-									 	shape, plot_mgr_arr, 
+									 	plot_mgr_arr, 
 										global_modifier_function = None,
 										subplots_adjust = subplots_adjust,
-										savedir = './examples-output/make-movie/',
+										savedir = './examples-output/make-movie-advanced/',
 										# show_index = 20,
 										nproc = 12,
 										duration = 5 )
