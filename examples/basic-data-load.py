@@ -62,13 +62,19 @@ ax.set_title( 'Electron KE vs. Time')
 
 # how to access input deck parameters (see parse_input_deck for more)
 # examples: 
-zpulse_metadata = osdata.input_deck.get_metadata( 'zpulse', 0 )
-a0 = zpulse_metadata[ 'a0']
+
+# 0 is optional and is the default; that will pull data from the 0th zpulse entry
+zpulse_metadata = osdata.input_deck[ 'zpulse', 0 ]  
+a0 = zpulse_metadata[ 'a0' ]
+print( zpulse_metadata ) 
 print( 'a0 = %.2f' % a0 )
 
+# alternatively, if you just need one parameter from that section: 
+a0 = osdata.input_deck[ 'zpulse' ][ 'a0' ] 
 
 # another input deck example: here's how to get the absolute times 
 # corresponding to the above electric field data
+# this is implemented in the input deck parser itself 
 timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
 dt = timestep_metadata[ 'dt' ]
 ndump = timestep_metadata[ 'ndump' ]

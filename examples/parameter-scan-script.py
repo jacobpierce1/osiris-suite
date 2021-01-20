@@ -9,10 +9,6 @@
 from osiris_suite import InputDeckManager 
 import os 
 
-batch_script = \
-'''
-
-'''
 
 sim_path = './test-data/test-data-2d/'
 
@@ -35,8 +31,6 @@ print( 'input_deck_path: ' + input_deck_path )
 print( 'batch_script_path: ' + batch_script_path )
 print( '\n' ) 
 
-# with open( batch_script_path, 'r' ) as f : 
-# 	batch_script = f.read()
 
 
 scan_dir = './examples-output/parameter-scan-example/'
@@ -47,8 +41,6 @@ os.makedirs( scan_dir, exist_ok = True )
 
 a0_vals = [ 1, 2, 3 ] 
 
-# grab data for the first (0-indexed) zpulse 
-zpulse_metadata = deck.get_metadata( 'zpulse', 0 )
 
 # get current directory for reference later 
 owd = os.getcwd()
@@ -60,7 +52,7 @@ for a0 in a0_vals :
 
 	os.makedirs( sim_path, exist_ok = True )
 
-	zpulse_metadata[ 'a0' ] = a0 
+	deck[ 'zpulse' ][ 'a0' ] = a0 
 
 	deck.write( new_deck_path )
 
@@ -73,7 +65,13 @@ for a0 in a0_vals :
 	print( command )
 
 	os.chdir( sim_path )
-	os.system( command )
+
+	# uncomment the below line to actually run the simulation
+	# os.system( command )
+
+	# could launch an analysis script at this point using the same method
+	# or for simplicity, an analysis script can be added to the above batch
+	# script. 
 
 	# go back to original directory 
 	print( 'cd ../' )
