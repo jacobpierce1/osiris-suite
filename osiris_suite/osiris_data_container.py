@@ -89,7 +89,7 @@ class H5FileManager( object ) :
 		data = np.array( self.data ).T
 		axes = self.axes 
 
-		self.unload
+		self.unload()
 
 		return data, axes 
 

@@ -105,12 +105,143 @@ class Plotter2D( object ) :
 			cb.formatter.set_powerlimits((0, 0))
 		# cb.update_ticks()
 
-		# print( 'setting title: ' + self.title )
-
-		ax.set_title( self.title )
+		ax.set_title( self.title, pad = 20  )
 		# ax.ticklabel_format( style = 'sci')
 
 
+# currently does not work. probably could get this to work 
+# if some time is put into it. 
+class Plotter2DWithProjections( object ) : 
+
+	def __init__(	self, cmap = None, 
+					logscale = 0, title = '',
+					avex = False, middlex = False,
+					avey = False, middley = False ) :
+	
+		if cmap is None : 
+			self.cmap = colorcet.m_rainbow
+		else : 
+			self.cmap = cmap 
+
+		self.logscale = logscale
+		self.title = title
+		self.avex = avex 
+		self.middlex = middlex
+		self.avey = avey
+		self.middley = middley 
+
+
+	def plot( self, ax, data, axes ) : 
+
+		aspect = ( axes[0][1] - axes[0][0] ) / ( axes[1][1] - axes[1][0] ) 
+
+		extent = [axes[0][0], axes[0][1], axes[1][0], axes[1][1] ]
+
+		norm = None
+		
+		if self.logscale : 
+
+			data = np.abs( data )
+			data = np.clip( data, 1e-10, None )
+			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
+
+		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
+						origin = 'lower', aspect = aspect, extent = extent,
+						norm = norm )
+		
+		# the padding works if the aspect is omitted as below, but then 
+		# the padding is wrong. 
+		# im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
+		# 				origin = 'lower', extent = extent, # aspect = aspect, extent = extent,
+		# 				norm = norm )
+
+
+		cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04 )
+
+		# # add lineouts 
+		# # https://matplotlib.org/mpl_toolkits/axes_grid/users/overview.html
+		# divider = make_axes_locatable( ax )
+
+		# if self.avex or self.middlex : 
+		# 	ax_xproj = divider.append_axes( "bottom", size="15%", pad=None, sharex=ax)
+		# 	xaxis = np.linspace(  axes[0][1], axes[0][0], data.shape[0] )
+		# 	if self.avex : 
+		# 		ax_xproj.plot( xaxis, np.average( data, axis = 1 ), c='r' )
+		# 	if self.middlex : 
+		# 		ax_xproj.plot( xaxis, data[:,int(data.shape[1]/2)])
+
+		# if self.avey or self.middley : 
+		# 	ax_yproj = divider.append_axes( "left", size=1.2, pad=0.1, sharey=ax)
+
+
+		if not self.logscale :
+			cb.formatter.set_powerlimits((0, 0))
+
+		ax.set_title( self.title )
+
+
+class Plotter2DProj1D( object ) : 
+
+	def __init__( self, logy = 0, title = '', ifvertical = False, axis = 0,
+					ifplotave = False, ifplotmiddle = False, 
+					ifplotidx = False, plotidx = 0, iflegend = False,
+					xlabel = '', ylabel = '', aspect = None ) : 
+
+		if axis not in [0, 1] : 
+			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
+
+		self.logy = logy
+		self.title = title 
+		self.ifvertical = ifvertical
+		self.axis = axis 
+		self.ifplotave = ifplotave
+		self.ifplotmiddle = ifplotmiddle
+		self.ifplotidx = ifplotidx
+		self.plotidx = plotidx 
+		self.iflegend = iflegend 
+		self.xlabel = xlabel 
+		self.ylabel = ylabel 
+		self.aspect = aspect 
+
+
+	def plot( self, ax, data, axes ) : 
+
+		if data.ndim != 2 : 
+			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
+			
+		xaxis = np.linspace(  axes[self.axis][0], 
+					axes[self.axis][1], data.shape[self.axis] )
+
+		ax.set_xlim( axes[self.axis][0], axes[self.axis][1] )
+
+		if self.ifplotave : 
+			aveaxis = 1 - self.axis
+			ax.plot( xaxis, np.average( data, axis = aveaxis ), c='r',
+						label = 'Average along %d' % aveaxis ) 
+		
+		if self.ifplotmiddle : 
+
+			if self.axis == 0 : 
+				data_slice = data[:, int(data.shape[1]/2)]
+			else : 
+				data_slice = data[int(data.shape[0]/2), :]
+
+			ax.plot( xaxis, data_slice, label = 'Middle', c='b')
+		
+		if self.iflegend : 
+			ax.legend( loc = 'best' )
+
+		if self.xlabel : 
+			ax.set_xlabel( self.xlabel ) 
+
+		if self.ylabel : 
+			ax.set_ylabel( self.ylabel ) 
+
+		if self.aspect is not None : 
+			xleft, xright = ax.get_xlim()
+			ybottom, ytop = ax.get_ylim()
+			ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*self.aspect)
+			
 
 class Plotter1D( object ) : 
 
@@ -157,20 +288,21 @@ class Plotter1D( object ) :
 
 		# else : 
 		# 	ax.ticklabel_format( style = 'sci')
+		if self.labels is not None : 
+			ax.legend( loc = 'best' )
 
-		ax.legend( loc = 'best' )
 
 
-
-def raw_osdata_TS_data_getter( osdata_leaf ) : 
-	return lambda index :  osdata_leaf.file_managers[ index ].unpack()
+def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) : 
+	return lambda index :  osdata_leaf.file_managers[ index // ndump_fac ].unpack()
 
 
 
 def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None, 
-							cmap = None, logscale = 0, title = '' ) : 
+							cmap = None, logscale = 0, title = '',
+							ndump_fac = 1 ) : 
 		
-	data_getter = raw_osdata_TS_data_getter( osdata_leaf )
+	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
 							logscale = logscale, title = title )
 
@@ -180,9 +312,10 @@ def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None,
 def raw_osdata_TS1D_plot_mgr( 	osdata_leaf, modifier_function = None, 
 								colors = None, linestyles = None, 
 								labels = None,
-								logy = 0, title = '' ) : 
+								logy = 0, title = '',
+								ndump_fac = 1 ) : 
 		
-	data_getter = raw_osdata_TS_data_getter( osdata_leaf )
+	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	
 	plotter = Plotter1D( multiple_data = False,
 						 colors = colors, 
@@ -256,7 +389,7 @@ def make_frame( index, osdata, timesteps,
 
 
 	fig, axarr = plt.subplots( * shape, 
-			figsize = figsize, squeeze = 0  )
+			figsize = figsize, squeeze = 0 )
 
 	timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
 	dt = timestep_metadata[ 'dt' ]
@@ -264,10 +397,7 @@ def make_frame( index, osdata, timesteps,
 
 	abs_time = timesteps[ index ] * dt * ndump
 
-	if suptitle : 
-		suptitle += ': '
-
-	suptitle += '%.2f$\\omega_\\mathrm{pe}^{-1}$' % abs_time
+	suptitle += '\n%.2f$\\omega_\\mathrm{pe}^{-1}$' % abs_time
 
 	fig.suptitle( suptitle )
 
@@ -278,7 +408,7 @@ def make_frame( index, osdata, timesteps,
 			plot_mgr = plot_mgr_arr[i][j]
 			
 			if plot_mgr is not None : 
-				plot_mgr.plot( axarr[i,j], index)
+				plot_mgr.plot( axarr[i,j], timesteps[index])
 			
 			else : 
 				fig.delaxes( axarr[i,j] ) 
@@ -343,12 +473,14 @@ def make_TS_movie(  osdata, timesteps,
 	os.makedirs( frame_savedir, exist_ok = 1 )
 
 	timesteps = np.asarray( timesteps )
-	spacing = int( len( timesteps ) / nframes )  # truncate 
+
+	spacing = int( len( timesteps ) / nframes ) # * ( timesteps[1] - timesteps[0])
+	
 	# indices = timesteps[ :: spacing ]
 	indices = spacing * np.arange( nframes, dtype = int )
 
 	print( 'INFO: plotting indices: ' + str( indices ) ) 
-	print( 'INFO: corresponding timesteps: ' + str( osdata.input_deck.get_abs_times( timesteps[ indices ] )) )
+	print( 'INFO: corresponding abs times: ' + str( osdata.input_deck.get_abs_times( timesteps[ indices ] )) )
 
 	if print_progress : 
 		print( "Making movie..." )

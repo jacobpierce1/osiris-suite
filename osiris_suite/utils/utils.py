@@ -9,11 +9,12 @@ import numpy as np
 hoffman_submission_script = '''
 #!/bin/bash 
 #$ -cwd
-#$ -o test_osiris.out   # stdout redirect 
-#$ -e test_osiris.err	# stderr redirect 
+#$ -n hello! 
+#$ -o output   # stdout redirect 
+#$ -e err	# stderr redirect 
 #$ -l highp,h_data=32G,h_rt=03:00:00,exclusive
 #$ -V  # inherit all environment variables 
-#$ -pe node %d
+#$ -pe dc* %d
 
 . /u/local/Modules/default/init/modules.sh
 
