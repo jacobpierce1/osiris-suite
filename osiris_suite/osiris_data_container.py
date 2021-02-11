@@ -28,7 +28,7 @@ class H5FileManager( object ) :
 			self.file = h5py.File( self.path, 'r')
 
 		except OSError : 
-			print( 'OSError: unable to open %s' % files[i] )
+			print( 'OSError: unable to open %s' % self.path )
 
 
 	def unload( self ) : 

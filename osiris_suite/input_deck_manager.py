@@ -26,7 +26,18 @@ class InputDeckManager( object ) :
 	def copy( self ) : 
 		copy = type( self )()
 		copy.keys = self.keys.copy()
-		copy.metadata = [ x.copy() for x in self.metadata ]
+		copy.metadata = [] # [ x.copy() for x in self.metadata ]
+
+		# the numpy arrays have to be separately copied
+		for odict in self.metadata :
+			odict_copy = collections.OrderedDict()  
+			for key, val in odict.items() :
+				if isinstance( val, np.ndarray ) : 			
+					odict_copy[key] = val.copy() 
+				else : 
+					odict_copy[key] = val 
+			copy.metadata.append( odict_copy )
+
 		return copy 
 
 
