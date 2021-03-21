@@ -35,7 +35,14 @@ class PlotManager( object ) :
 
 	def plot( self, ax, timestep ) : 
 
-		data, axes = self.data_getter( timestep ) 
+		tmp = self.data_getter( timestep ) 
+		
+		if( tmp ) : 
+			data, axes = tmp 
+
+		else : 
+			return 
+
 		self.plotter.plot( ax, data, axes ) 
 
 		if self.modifier_function is not None : 
@@ -47,7 +54,7 @@ class PlotManager( object ) :
 class Plotter2D( object ) : 
 
 	def __init__(	self, cmap = None, 
-					logscale = 0, title = '' ) :
+					logscale = 0, title = '', log_min = 1e-10 ) :
 	
 		if cmap is None : 
 			self.cmap = colorcet.m_rainbow
@@ -57,6 +64,8 @@ class Plotter2D( object ) :
 		self.logscale = logscale
 
 		self.title = title
+
+		self.log_min = log_min 
 
 
 	def plot( self, ax, data, axes ) : 
@@ -76,7 +85,7 @@ class Plotter2D( object ) :
 		if self.logscale : 
 
 			data = np.abs( data )
-			data = np.clip( data, 1e-10, None )
+			data = np.clip( data, self.log_min, None )
 			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
 
 		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
@@ -242,6 +251,8 @@ class Plotter2DProj1D( object ) :
 			ybottom, ytop = ax.get_ylim()
 			ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*self.aspect)
 			
+
+
 
 class Plotter1D( object ) : 
 
