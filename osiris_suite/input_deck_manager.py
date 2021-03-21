@@ -53,7 +53,7 @@ class InputDeckManager( object ) :
 
 		matches = re.findall( r'(.*?){(.*?)}', text )
 
-		self.keys = [ x[0] for x in matches ] 
+		self.keys = [ x[0].strip() for x in matches ] 
 
 		# print( self.keys ) 
 
