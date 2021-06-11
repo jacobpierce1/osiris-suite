@@ -118,75 +118,75 @@ class Plotter2D( object ) :
 		# ax.ticklabel_format( style = 'sci')
 
 
-# currently does not work. probably could get this to work 
-# if some time is put into it. 
-class Plotter2DWithProjections( object ) : 
+# # currently does not work. probably could get this to work 
+# # if some time is put into it. 
+# class Plotter2DWithProjections( object ) : 
 
-	def __init__(	self, cmap = None, 
-					logscale = 0, title = '',
-					avex = False, middlex = False,
-					avey = False, middley = False ) :
+# 	def __init__(	self, cmap = None, 
+# 					logscale = 0, title = '',
+# 					avex = False, middlex = False,
+# 					avey = False, middley = False ) :
 	
-		if cmap is None : 
-			self.cmap = colorcet.m_rainbow
-		else : 
-			self.cmap = cmap 
+# 		if cmap is None : 
+# 			self.cmap = colorcet.m_rainbow
+# 		else : 
+# 			self.cmap = cmap 
 
-		self.logscale = logscale
-		self.title = title
-		self.avex = avex 
-		self.middlex = middlex
-		self.avey = avey
-		self.middley = middley 
+# 		self.logscale = logscale
+# 		self.title = title
+# 		self.avex = avex 
+# 		self.middlex = middlex
+# 		self.avey = avey
+# 		self.middley = middley 
 
 
-	def plot( self, ax, data, axes ) : 
+# 	def plot( self, ax, data, axes ) : 
 
-		aspect = ( axes[0][1] - axes[0][0] ) / ( axes[1][1] - axes[1][0] ) 
+# 		aspect = ( axes[0][1] - axes[0][0] ) / ( axes[1][1] - axes[1][0] ) 
 
-		extent = [axes[0][0], axes[0][1], axes[1][0], axes[1][1] ]
+# 		extent = [axes[0][0], axes[0][1], axes[1][0], axes[1][1] ]
 
-		norm = None
+# 		norm = None
 		
-		if self.logscale : 
+# 		if self.logscale : 
 
-			data = np.abs( data )
-			data = np.clip( data, 1e-10, None )
-			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
+# 			data = np.abs( data )
+# 			data = np.clip( data, 1e-10, None )
+# 			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
 
-		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
-						origin = 'lower', aspect = aspect, extent = extent,
-						norm = norm )
+# 		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
+# 						origin = 'lower', aspect = aspect, extent = extent,
+# 						norm = norm )
 		
-		# the padding works if the aspect is omitted as below, but then 
-		# the padding is wrong. 
-		# im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
-		# 				origin = 'lower', extent = extent, # aspect = aspect, extent = extent,
-		# 				norm = norm )
+# 		# the padding works if the aspect is omitted as below, but then 
+# 		# the padding is wrong. 
+# 		# im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
+# 		# 				origin = 'lower', extent = extent, # aspect = aspect, extent = extent,
+# 		# 				norm = norm )
 
 
-		cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04 )
+# 		cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04 )
 
-		# # add lineouts 
-		# # https://matplotlib.org/mpl_toolkits/axes_grid/users/overview.html
-		# divider = make_axes_locatable( ax )
+# 		# # add lineouts 
+# 		# # https://matplotlib.org/mpl_toolkits/axes_grid/users/overview.html
+# 		# divider = make_axes_locatable( ax )
 
-		# if self.avex or self.middlex : 
-		# 	ax_xproj = divider.append_axes( "bottom", size="15%", pad=None, sharex=ax)
-		# 	xaxis = np.linspace(  axes[0][1], axes[0][0], data.shape[0] )
-		# 	if self.avex : 
-		# 		ax_xproj.plot( xaxis, np.average( data, axis = 1 ), c='r' )
-		# 	if self.middlex : 
-		# 		ax_xproj.plot( xaxis, data[:,int(data.shape[1]/2)])
+# 		# if self.avex or self.middlex : 
+# 		# 	ax_xproj = divider.append_axes( "bottom", size="15%", pad=None, sharex=ax)
+# 		# 	xaxis = np.linspace(  axes[0][1], axes[0][0], data.shape[0] )
+# 		# 	if self.avex : 
+# 		# 		ax_xproj.plot( xaxis, np.average( data, axis = 1 ), c='r' )
+# 		# 	if self.middlex : 
+# 		# 		ax_xproj.plot( xaxis, data[:,int(data.shape[1]/2)])
 
-		# if self.avey or self.middley : 
-		# 	ax_yproj = divider.append_axes( "left", size=1.2, pad=0.1, sharey=ax)
+# 		# if self.avey or self.middley : 
+# 		# 	ax_yproj = divider.append_axes( "left", size=1.2, pad=0.1, sharey=ax)
 
 
-		if not self.logscale :
-			cb.formatter.set_powerlimits((0, 0))
+# 		if not self.logscale :
+# 			cb.formatter.set_powerlimits((0, 0))
 
-		ax.set_title( self.title )
+# 		ax.set_title( self.title )
 
 
 class Plotter2DProj1D( object ) : 
@@ -227,7 +227,7 @@ class Plotter2DProj1D( object ) :
 			aveaxis = 1 - self.axis
 			ax.plot( xaxis, np.average( data, axis = aveaxis ), c='r',
 						label = 'Average along %d' % aveaxis ) 
-		
+
 		if self.ifplotmiddle : 
 
 			if self.axis == 0 : 
@@ -236,7 +236,21 @@ class Plotter2DProj1D( object ) :
 				data_slice = data[int(data.shape[0]/2), :]
 
 			ax.plot( xaxis, data_slice, label = 'Middle', c='b')
-		
+
+		if self.ifplotidx :
+
+			if self.axis == 0 : 
+				data_slice = data[:, self.plotidx ]
+			else : 
+				data_slice = data[ self.plotidx, :]
+
+			label = 'x%d'%(1-self.axis + 1) + ' = ' + str(self.plotidx)
+			ax.plot( xaxis, data_slice, label = label, c='g')
+
+
+		if self.title : 
+			ax.set_title( self.title ) 
+
 		if self.iflegend : 
 			ax.legend( loc = 'best' )
 
@@ -311,11 +325,11 @@ def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) :
 
 def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None, 
 							cmap = None, logscale = 0, title = '',
-							ndump_fac = 1 ) : 
+							ndump_fac = 1, log_min = 1e-8 ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
-							logscale = logscale, title = title )
+							logscale = logscale, title = title, log_min = log_min )
 
 	return PlotManager( data_getter, plotter, modifier_function )
 
