@@ -483,6 +483,15 @@ def make_TS_movie(  osdata, timesteps,
 	frame_savedir = savedir + '/frames/'
 	os.makedirs( frame_savedir, exist_ok = 1 )
 
+	files = glob.glob( frame_savedir + '*')
+
+	for f in files:
+		try:
+			os.remove(f)
+		except : 
+			print("Error deleting file: %s " % (f ))
+
+
 	timesteps = np.asarray( timesteps )
 
 	spacing = int( len( timesteps ) / nframes ) # * ( timesteps[1] - timesteps[0])
