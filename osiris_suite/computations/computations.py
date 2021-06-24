@@ -35,3 +35,71 @@ def compute_lorentz_transformation( osdata, gamma,
 	boosted_data = OsirisDataContainer() 
 
 	# check if the boost gamma is compatible with the unboosted mesh
+
+
+
+class Q3DFieldComputationManager( object ) : 
+
+	def __init__( self, osdata, key ) : 
+
+		self.osdata = osdata
+		self.key = key 
+
+		self.gather_leaves() 
+
+
+	def gather_leaves( self ) : 
+
+		leaves = [] 
+
+		branch = self.osdata.data.ms.fld
+		
+		m = 0 
+		while ( 1 ) : 
+			key = 'mode_%d_re' % m
+			
+			if key not in branch :
+				break  
+
+			# mode m is present. load the leaves. 
+			leaves.append( [ None, None ] )
+
+			fld_key = '%s_cyl_m' % self.key
+			leaves[m][0] = branch[ key ][ fld_key ] 
+
+			key = 'mode_%d_im' % m
+
+			if m > 0 : 
+				leaves[m][1] = branch[ key ][ fld_key ] 
+
+			# no data for the im0 mode 
+			# else : 
+			# 	leaves[m][1] = None
+
+			m += 1 
+
+		self.leaves = leaves
+		self.num_leaves = m 
+
+
+	def compute_xz_projection( self, index ) : 	
+
+		for m in range( self.num_leaves ) : 
+
+			if m == 0 : 
+				data, axes = self.leaves[m][0].file_managers[ index ].unpack()
+				ret = data 
+
+			else : 
+				data, axes = self.leaves[m][0].file_managers[ index ].unpack()
+				ret += data		
+
+		return ret, axes
+
+
+
+	@classmethod
+	def decompose_fields( cls, fields ) : 
+
+		...
+
