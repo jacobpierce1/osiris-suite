@@ -96,8 +96,11 @@ class InputDeckManager( object ) :
 
 					if metadata_val_split[0] in bool_strs :
 
-						true_mask = np.array( [ b == '.true.' for b in metadata_val_split ] )
-	
+						true_mask = np.array( [ b.strip() == '.true.' for b in metadata_val_split ] )
+						
+						print( metadata_val_split )
+						print( true_mask ) 
+
 						metadata_val = np.zeros_like( metadata_val_split, dtype = bool )
 						metadata_val[ true_mask ] = True
 						metadata_val[ ~true_mask ] = False
