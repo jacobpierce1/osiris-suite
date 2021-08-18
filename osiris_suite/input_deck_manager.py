@@ -96,8 +96,8 @@ class InputDeckManager( object ) :
 
 					if metadata_val_split[0] in bool_strs :
 
-						true_mask = np.array( [ b == '.true.' for b in metadata_val_split ] )
-	
+						true_mask = np.array( [ b.strip() == '.true.' for b in metadata_val_split ] )
+						
 						metadata_val = np.zeros_like( metadata_val_split, dtype = bool )
 						metadata_val[ true_mask ] = True
 						metadata_val[ ~true_mask ] = False
@@ -262,6 +262,11 @@ class InputDeckManager( object ) :
 		ndump = self[ 'time_step' ][ 'ndump' ]
 		return dt * ndump * np.asarray( indices ) 
 
+
+	def insert( self, idx, key ) : 
+
+		self.keys.insert( idx, key ) 
+		self.metadata.insert( idx, collections.OrderedDict() )
 
 
 # def string_to_array( string ) : 
