@@ -17,9 +17,152 @@ import matplotlib.pyplot as plt
 import pathos.multiprocessing
 
 
-# from .plotter_utils import ffmpeg_combine, plot_2d_raw
+
+# class MidpointLogNorm(colors.SymLogNorm):
+# 	"""
+# 	Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
+# 	e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
+
+# 	All arguments are the same as SymLogNorm, except for midpoint    
+# 	"""
+# 	def __init__(self, lin_thres, lin_scale = 1.0, midpoint=None, vmin=None, vmax=None):
+# 		self.midpoint = midpoint
+# 		self.lin_thres = lin_thres
+# 		self.lin_scale = lin_scale
+# 		#fraction of the cmap that the linear component occupies
+# 		self.linear_proportion = (lin_scale / (lin_scale + 1)) * 0.5
+# 		# print(self.linear_proportion)
+
+# 		colors.SymLogNorm.__init__(self, lin_thres, lin_scale, vmin, vmax)
+
+# 	def __get_value__(self, v, log_val, clip=None):
+# 		if v < -self.lin_thres or v > self.lin_thres:
+# 			return log_val
+
+# 		x = [-self.lin_thres, self.midpoint, self.lin_thres]
+# 		y = [0.5 - self.linear_proportion, 0.5, 0.5 + self.linear_proportion]
+# 		interpol = np.interp(v, x, y)
+# 		return interpol
+
+# 	def __call__(self, value, clip=None):
+# 		log_val = colors.SymLogNorm.__call__(self, value)
+
+# 		print( 'value:' , value )
+# 		print( value.shape )
+
+# 		out = [0] * len(value)
+# 		for i, v in enumerate(value):
+# 			print( 'v:' , v )
+# 			out[i] = self.__get_value__(v, log_val[i])
+
+# 		return np.ma.masked_array(out)
 
 
+class TwoSlopeSymLogNorm( colors.Normalize ):
+	"""
+	The symmetrical logarithmic scale is logarithmic in both the
+	positive and negative directions from the origin.
+
+	Since the values close to zero tend toward infinity, there is a
+	need to have a range around zero that is linear.  The parameter
+	*linthresh* allows the user to specify the size of this range
+	(-*linthresh*, *linthresh*).
+	"""
+	def __init__(self,  linthresh, linscale=1.0,
+	             vmin=None, vmax=None, clip=False):
+		"""
+		*linthresh*:
+		The range within which the plot is linear (to
+		avoid having the plot go to infinity around zero).
+
+		*linscale*:
+		This allows the linear range (-*linthresh* to *linthresh*)
+		to be stretched relative to the logarithmic range.  Its
+		value is the number of decades to use for each half of the
+		linear range.  For example, when *linscale* == 1.0 (the
+		default), the space used for the positive and negative
+		halves of the linear range will be equal to one decade in
+		the logarithmic range. Defaults to 1.
+		"""
+		colors.Normalize.__init__(self, vmin, vmax, clip)
+		self.linthresh = float(linthresh)
+		self._linscale_adj = (linscale / (1.0 - np.e ** -1))
+		if vmin is not None and vmax is not None:
+			self._transform_vmin_vmax()
+
+	def __call__(self, value, clip=None):
+		if clip is None:
+			clip = self.clip
+
+		result, is_scalar = self.process_value(value)
+		self.autoscale_None(result)
+		vmin, vmax = self.vmin, self.vmax
+
+		if vmin > vmax:
+			raise ValueError("minvalue must be less than or equal to maxvalue")
+		elif vmin == vmax:
+			result.fill(0)
+		else:
+			if clip:
+				mask = np.ma.getmask(result)
+				result = np.ma.array(np.clip(result.filled(vmax), vmin, vmax),
+				                     mask=mask)
+			# in-place equivalent of above can be much faster
+			resdat = self._transform(result.data)
+			# resdat -= self._lower
+			# resdat /= (self._upper - self._lower)
+			resdat = np.ma.masked_array( 
+						np.interp( resdat, [self._lower, 0, self._upper],
+						[0.0, 0.5, 1.]), mask=np.ma.getmask(resdat))
+
+		if is_scalar:
+		    result = result[0]
+		return result
+
+	def _transform(self, a):
+		"""Inplace transformation."""
+		with np.errstate(invalid="ignore"):
+			masked = np.abs(a) > self.linthresh
+		sign = np.sign(a[masked])
+		log = (self._linscale_adj + np.log(np.abs(a[masked]) / self.linthresh))
+		log *= sign * self.linthresh
+		a[masked] = log
+		a[~masked] *= self._linscale_adj
+		return a
+
+	# def _inv_transform(self, a):
+	# 	"""Inverse inplace Transformation."""
+	# 	masked = np.abs(a) > (self.linthresh * self._linscale_adj)
+	# 	sign = np.sign(a[masked])
+	# 	exp = np.exp(sign * a[masked] / self.linthresh - self._linscale_adj)
+	# 	exp *= sign * self.linthresh
+	# 	a[masked] = exp
+	# 	a[~masked] /= self._linscale_adj
+	# 	return a
+
+	def _transform_vmin_vmax(self):
+		"""Calculates vmin and vmax in the transformed system."""
+		vmin, vmax = self.vmin, self.vmax
+		arr = np.array([vmax, vmin]).astype(float)
+		self._upper, self._lower = self._transform(arr)
+
+	# def inverse(self, value):
+	# 	if not self.scaled():
+	# 		raise ValueError("Not invertible until scaled")
+	# 	val = np.ma.asarray(value)
+	# 	val = val * (self._upper - self._lower) + self._lower
+	# 	return self._inv_transform(val)
+
+	def autoscale(self, A):
+		# docstring inherited.
+		super().autoscale(A)
+		self._transform_vmin_vmax()
+
+
+	def autoscale_None(self, A):
+		# docstring inherited.
+		super().autoscale_None(A)
+		self._transform_vmin_vmax()
 
 
 class PlotManager( object ) : 
@@ -54,7 +197,9 @@ class PlotManager( object ) :
 class Plotter2D( object ) : 
 
 	def __init__(	self, cmap = None, 
-					logscale = 0, title = '', log_min = 1e-10 ) :
+					logscale = False, sym_logscale = False,
+					title = '', log_min = 1e-10,
+					use_divnorm = False ) :
 	
 		if cmap is None : 
 			self.cmap = colorcet.m_rainbow
@@ -62,10 +207,10 @@ class Plotter2D( object ) :
 			self.cmap = cmap 
 
 		self.logscale = logscale
-
+		self.sym_logscale = sym_logscale
 		self.title = title
-
 		self.log_min = log_min 
+		self.use_divnorm = use_divnorm
 
 
 	def plot( self, ax, data, axes ) : 
@@ -82,11 +227,43 @@ class Plotter2D( object ) :
 
 		norm = None
 		
-		if self.logscale : 
+		if self.sym_logscale : 
+			
+			if self.use_divnorm : 
+				# norm = TwoSlopeSymLogNorm( self.log_min, vmin = data.min(), vmax = data.max() )
+				vmax = max( data.max(), np.abs( data.min() ) )
+				norm = colors.SymLogNorm( self.log_min, vmin = -vmax, vmax = vmax )
+				# todo: use TwoSlopeSymLogNorm
+
+			else : 
+				norm = colors.SymLogNorm( self.log_min, vmin = data.min(), vmax = data.max() )
+
+		elif self.logscale : 
 
 			data = np.abs( data )
 			data = np.clip( data, self.log_min, None )
 			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
+
+		# lin scale 
+		else : 
+
+			if self.use_divnorm : 
+
+				try : 
+					norm_class = colors.DivergingNorm
+				
+				# for matplotlib 3.2+ 
+				except : 
+					norm_class = colors.TwoSlopeNorm 
+
+				vmin = data.min() 
+				vmax = data.max() 
+
+				if ( 0 > vmin ) and ( 0 < vmax ) : 
+					norm = norm_class( vmin = vmin, vcenter = 0.0, vmax = vmax )
+				else : 
+					norm = None
+
 
 		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
 						origin = 'lower', aspect = aspect, extent = extent,
@@ -110,7 +287,7 @@ class Plotter2D( object ) :
 		# cb = fig.colorbar( im, cax = cax ) # format = '%.1e' )
 		# cb = add_colorbar( im ) 
 
-		if not self.logscale :
+		if not ( self.logscale or self.sym_logscale )  :
 			cb.formatter.set_powerlimits((0, 0))
 		# cb.update_ticks()
 
@@ -325,11 +502,12 @@ def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) :
 
 def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None, 
 							cmap = None, logscale = 0, title = '',
-							ndump_fac = 1, log_min = 1e-8 ) : 
+							ndump_fac = 1, log_min = 1e-8, use_divnorm = False ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
-							logscale = logscale, title = title, log_min = log_min )
+							logscale = logscale, title = title, 
+							use_divnorm = use_divnorm, log_min = log_min )
 
 	return PlotManager( data_getter, plotter, modifier_function )
 
@@ -459,7 +637,8 @@ def make_TS_movie(  osdata, timesteps,
 					global_modifier_function = None,
 					nproc = 1, nframes = 20, duration = 5,
 					print_progress = True,
-					show_index = None ) : 
+					show_index = None,
+					dpi = 400 ) : 
 	
 	'''
 	generate plots and make a movie for a given set of OSIRIS data
@@ -496,15 +675,6 @@ def make_TS_movie(  osdata, timesteps,
 
 	frame_savedir = savedir + '/frames/'
 	os.makedirs( frame_savedir, exist_ok = 1 )
-
-	files = glob.glob( frame_savedir + '*')
-
-	for f in files:
-		try:
-			os.remove(f)
-		except : 
-			print("Error deleting file: %s " % (f ))
-
 
 	timesteps = np.asarray( timesteps )
 
@@ -544,10 +714,12 @@ def make_TS_movie(  osdata, timesteps,
 		path = frame_savedir + '/%03d' % i
 		
 		if show : 
+			plt.savefig( path + '.pdf' ) 
+			# plt.savefig( path, dpi = dpi ) 
 			plt.show()
 
 		else : 
-			plt.savefig( path, dpi = 400 ) 
+			plt.savefig( path, dpi = dpi ) 
 			plt.close() 
 
 
@@ -555,10 +727,25 @@ def make_TS_movie(  osdata, timesteps,
 		handle_index( show_index )
 		return 
 
-	print( 'nproc: ', nproc ) 
-	pool = pathos.multiprocessing.ProcessingPool( nproc ) 
+	files = glob.glob( frame_savedir + '*')
 
-	pool.map( handle_index, range( len( indices ) ) )	
+	# only delete files if we aren't showing an index 
+	for f in files:
+		try:
+			os.remove(f)
+		except : 
+			print("Error deleting file: %s " % (f ))
+
+	print( 'nproc: ', nproc ) 
+
+	if( nproc > 1 ) : 
+		pool = pathos.multiprocessing.ProcessingPool( nproc ) 
+
+		pool.map( handle_index, range( len( indices ) ) )	
+
+	else : 
+		for i in range( len( indices) ) : 
+			handle_index( i ) 
 	
 	movie_path = ( savedir 
 		+ os.path.basename( os.path.dirname( savedir ) ) 
