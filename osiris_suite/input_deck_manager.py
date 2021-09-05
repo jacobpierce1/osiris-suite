@@ -263,6 +263,11 @@ class InputDeckManager( object ) :
 		return dt * ndump * np.asarray( indices ) 
 
 
+	def insert( self, idx, key ) : 
+
+		self.keys.insert( idx, key ) 
+		self.metadata.insert( idx, collections.OrderedDict() )
+
 
 # def string_to_array( string ) : 
 
