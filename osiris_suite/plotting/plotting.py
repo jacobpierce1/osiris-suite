@@ -199,6 +199,7 @@ class Plotter2D( object ) :
 	def __init__(	self, cmap = None, 
 					logscale = False, sym_logscale = False,
 					title = '', log_min = 1e-10,
+					bounds = None,
 					use_divnorm = False ) :
 	
 		if cmap is None : 
@@ -211,6 +212,7 @@ class Plotter2D( object ) :
 		self.title = title
 		self.log_min = log_min 
 		self.use_divnorm = use_divnorm
+		self.bounds = bounds 
 
 
 	def plot( self, ax, data, axes ) : 
@@ -220,13 +222,33 @@ class Plotter2D( object ) :
 		# 	aspect = ( axes[0][1] - axes[0][0] ) / ( axes[1][1] - axes[1][0] ) 
 		# else : 
 		# 	aspect = 'equal'
+		new_axes = np.copy( axes ) 
 
-		aspect = ( axes[0][1] - axes[0][0] ) / ( axes[1][1] - axes[1][0] ) 
+		if self.bounds : 
+			for i in range(2) : 
+				for j in range(2) : 
+					if self.bounds[i][j] is not None : 
+						new_axes[i,j] = self.bounds[i][j]
 
-		extent = [axes[0][0], axes[0][1], axes[1][0], axes[1][1] ]
+			dx = ( axes[:,1] - axes[:,0] ) / data.shape
+			imin = np.floor( (new_axes[:,0] - axes[:,0]) / dx ).astype( int ) 
+			imax = np.floor( (new_axes[:,1] - axes[:,0]) / dx ).astype( int ) 
+
+			data = data[ imin[0] : imax[0], imin[1] : imax[1] ]
+
+		else : 
+			new_axes = axes 
+
+		# print( new_axes )
+
+		aspect = ( new_axes[0][1] - new_axes[0][0] ) / ( new_axes[1][1] - new_axes[1][0] ) 
+
+		extent = [new_axes[0][0], new_axes[0][1], new_axes[1][0], new_axes[1][1] ]
 
 		norm = None
 		
+
+
 		if self.sym_logscale : 
 			
 			if self.use_divnorm : 
@@ -249,12 +271,13 @@ class Plotter2D( object ) :
 
 			if self.use_divnorm : 
 
-				try : 
-					norm_class = colors.DivergingNorm
-				
 				# for matplotlib 3.2+ 
-				except : 
+				try : 
 					norm_class = colors.TwoSlopeNorm 
+				
+				# for earlier versions 
+				except : 
+					norm_class = colors.DivergingNorm
 
 				vmin = data.min() 
 				vmax = data.max() 
@@ -291,7 +314,8 @@ class Plotter2D( object ) :
 			cb.formatter.set_powerlimits((0, 0))
 		# cb.update_ticks()
 
-		ax.set_title( self.title, pad = 20  )
+		# ax.set_title( self.title, pad = 20  )
+		ax.set_title( self.title)
 		# ax.ticklabel_format( style = 'sci')
 
 
@@ -502,11 +526,13 @@ def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) :
 
 def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None, 
 							cmap = None, logscale = 0, title = '',
-							ndump_fac = 1, log_min = 1e-8, use_divnorm = False ) : 
+							ndump_fac = 1, bounds = None,
+							log_min = 1e-8, use_divnorm = False ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
 							logscale = logscale, title = title, 
+							bounds = bounds,
 							use_divnorm = use_divnorm, log_min = log_min )
 
 	return PlotManager( data_getter, plotter, modifier_function )
@@ -583,7 +609,7 @@ def ffmpeg_combine( plotdir, movie_name, duration ):
 def make_frame( index, osdata, timesteps,
 				shape, plot_mgr_arr, 
 				suptitle = '', 
-				figsize = None, subplots_adjust = None ) : 
+				figsize = None, subplots_adjust = None, sharex = False ) : 
 
 	N, M = shape 
 
@@ -591,7 +617,7 @@ def make_frame( index, osdata, timesteps,
 		figsize = ( 15, 9 )
 
 
-	fig, axarr = plt.subplots( * shape, 
+	fig, axarr = plt.subplots( * shape, sharex = sharex, 
 			figsize = figsize, squeeze = 0 )
 
 	timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
@@ -638,6 +664,7 @@ def make_TS_movie(  osdata, timesteps,
 					nproc = 1, nframes = 20, duration = 5,
 					print_progress = True,
 					show_index = None,
+					sharex = False,
 					dpi = 400 ) : 
 	
 	'''
@@ -703,7 +730,8 @@ def make_TS_movie(  osdata, timesteps,
 		fig, axarr = make_frame( index,
 								 osdata, timesteps,
 								 shape, plot_mgr_arr, 
-								 suptitle, figsize, subplots_adjust )
+								 suptitle, figsize, subplots_adjust,
+								 sharex )
 
 		if global_modifier_function is not None : 
 			global_modifier_function( fig, axarr ) 
