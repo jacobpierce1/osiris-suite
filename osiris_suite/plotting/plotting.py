@@ -525,13 +525,15 @@ def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) :
 
 
 def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None, 
-							cmap = None, logscale = 0, title = '',
+							cmap = None, logscale = 0, sym_logscale = False,
+							title = '',
 							ndump_fac = 1, bounds = None,
 							log_min = 1e-8, use_divnorm = False ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
-							logscale = logscale, title = title, 
+							logscale = logscale, sym_logscale = sym_logscale,
+							title = title, 
 							bounds = bounds,
 							use_divnorm = use_divnorm, log_min = log_min )
 
