@@ -80,7 +80,15 @@ class InputDeckManager( object ) :
 				metadata_key = metadata_key.strip()
 				metadata_val = metadata_val.strip() 
 
-				metadata_val_split = metadata_val.split( ',' )
+				# first split into quote pairs -- we use this for if it's a string 
+				metadata_val_split = re.findall( r'(\".+?\")', metadata_val )
+
+				# no match: is not string, split by commas instead.  
+				if len(metadata_val_split ) == 0 : 
+	
+					metadata_val_split = metadata_val.split( ',' )
+
+				# print( metadata_val_split )
 
 				is_arr = ( len( metadata_val_split ) > 1 ) 
 
