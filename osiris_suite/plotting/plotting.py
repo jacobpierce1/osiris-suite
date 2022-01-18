@@ -200,7 +200,8 @@ class Plotter2D( object ) :
 					logscale = False, sym_logscale = False,
 					title = '', log_min = 1e-10,
 					bounds = None,
-					use_divnorm = False ) :
+					use_divnorm = False,
+					vmin = None, vmax = None ) :
 	
 		if cmap is None : 
 			self.cmap = colorcet.m_rainbow
@@ -213,7 +214,9 @@ class Plotter2D( object ) :
 		self.log_min = log_min 
 		self.use_divnorm = use_divnorm
 		self.bounds = bounds 
-
+		self.interpolation = 'bilinear'
+		self.vmin = vmin
+		self.vmax = vmax 
 
 	def plot( self, ax, data, axes ) : 
 
@@ -247,24 +250,39 @@ class Plotter2D( object ) :
 
 		norm = None
 		
+		if self.vmin is None : 
+			vmin = data.min() 
+		else : 
+			vmin = self.vmin 
 
+		if self.vmax is None : 
+			vmax = data.max() 
+		else : 
+			vmax = self.vmax 
 
 		if self.sym_logscale : 
 			
 			if self.use_divnorm : 
 				# norm = TwoSlopeSymLogNorm( self.log_min, vmin = data.min(), vmax = data.max() )
-				vmax = max( data.max(), np.abs( data.min() ) )
-				norm = colors.SymLogNorm( self.log_min, vmin = -vmax, vmax = vmax )
+					
+				vmax = max( vmax, abs(vmin) )
+
+				norm = colors.SymLogNorm( self.log_min, vmin = -vmax, vmax = vmax, base = 10 )
 				# todo: use TwoSlopeSymLogNorm
 
 			else : 
-				norm = colors.SymLogNorm( self.log_min, vmin = data.min(), vmax = data.max() )
+				norm = colors.SymLogNorm( self.log_min, vmin = vmin, vmax = vmax, base = 10 )
 
 		elif self.logscale : 
 
 			data = np.abs( data )
 			data = np.clip( data, self.log_min, None )
-			norm = colors.LogNorm( vmin = data.min(), vmax = data.max() )
+
+			if self.vmax is None : 
+				vmax = data.max() 
+
+			# norm = colors.LogNorm( vmin = vmin, vmax = vmax )
+			norm = colors.LogNorm( vmin = self.log_min, vmax = vmax )
 
 		# lin scale 
 		else : 
@@ -279,16 +297,19 @@ class Plotter2D( object ) :
 				except : 
 					norm_class = colors.DivergingNorm
 
-				vmin = data.min() 
-				vmax = data.max() 
+				if vmax <= 0 : 
+					vmax = -vmin 
 
-				if ( 0 > vmin ) and ( 0 < vmax ) : 
-					norm = norm_class( vmin = vmin, vcenter = 0.0, vmax = vmax )
-				else : 
-					norm = None
+				if vmin >= 0 : 
+					vmin = -vmax 
 
+				norm = norm_class( vmin = vmin, vcenter = 0.0, vmax = vmax )
+				
+			else : 
 
-		im = ax.imshow( data.T, cmap = self.cmap, interpolation = 'bilinear', 
+				norm = colors.Normalize( vmin = vmin, vmax = vmax )
+
+		im = ax.imshow( data.T, cmap = self.cmap, interpolation = self.interpolation, 
 						origin = 'lower', aspect = aspect, extent = extent,
 						norm = norm )
 
@@ -389,13 +410,38 @@ class Plotter2D( object ) :
 
 # 		ax.set_title( self.title )
 
+class PlotManagerStack( object ) : 
+
+	def __init__( self, plot_mgr_list ) : 
+
+		self.plot_mgr_list = plot_mgr_list
+
+	def plot( self, ax, timestep ) : 
+
+		for plot_mgr in self.plot_mgr_list : 
+
+			plot_mgr.plot( ax, timestep )
+
+		# tmp = self.data_getter( timestep ) 
+		
+		# if( tmp ) : 
+		# 	data, axes = tmp 
+
+		# else : 
+		# 	return 
+
+		# self.plotter.plot( ax, data, axes ) 
+
+		# if self.modifier_function is not None : 
+		# 	self.modifier_function( ax, data, axes ) 
 
 class Plotter2DProj1D( object ) : 
 
 	def __init__( self, logy = 0, title = '', ifvertical = False, axis = 0,
 					ifplotave = False, ifplotmiddle = False, 
 					ifplotidx = False, plotidx = 0, iflegend = False,
-					xlabel = '', ylabel = '', aspect = None ) : 
+					xlabel = '', ylabel = '', aspect = None,
+					ymin = None, ymax = None ) : 
 
 		if axis not in [0, 1] : 
 			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
@@ -412,6 +458,8 @@ class Plotter2DProj1D( object ) :
 		self.xlabel = xlabel 
 		self.ylabel = ylabel 
 		self.aspect = aspect 
+		self.ymin = ymin
+		self.ymax = ymax
 
 
 	def plot( self, ax, data, axes ) : 
@@ -448,6 +496,11 @@ class Plotter2DProj1D( object ) :
 			label = 'x%d'%(1-self.axis + 1) + ' = ' + str(self.plotidx)
 			ax.plot( xaxis, data_slice, label = label, c='g')
 
+		if self.ymin is not None :
+			ax.set_ylim( ymin = self.ymin ) 
+
+		if self.ymax is not None :
+			ax.set_ylim( ymax = self.ymax ) 
 
 		if self.title : 
 			ax.set_title( self.title ) 
@@ -528,14 +581,16 @@ def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None,
 							cmap = None, logscale = 0, sym_logscale = False,
 							title = '',
 							ndump_fac = 1, bounds = None,
-							log_min = 1e-8, use_divnorm = False ) : 
+							log_min = 1e-8, use_divnorm = False,
+							vmin = None, vmax = None ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
 							logscale = logscale, sym_logscale = sym_logscale,
 							title = title, 
 							bounds = bounds,
-							use_divnorm = use_divnorm, log_min = log_min )
+							use_divnorm = use_divnorm, log_min = log_min,
+							vmin = vmin, vmax = vmax )
 
 	return PlotManager( data_getter, plotter, modifier_function )
 
