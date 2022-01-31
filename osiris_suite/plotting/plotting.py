@@ -201,7 +201,8 @@ class Plotter2D( object ) :
 					title = '', log_min = 1e-10,
 					bounds = None,
 					use_divnorm = False,
-					vmin = None, vmax = None ) :
+					vmin = None, vmax = None,
+					xlabel = None, ylabel = None, cbar_label = None ) :
 	
 		if cmap is None : 
 			self.cmap = colorcet.m_rainbow
@@ -217,6 +218,9 @@ class Plotter2D( object ) :
 		self.interpolation = 'bilinear'
 		self.vmin = vmin
 		self.vmax = vmax 
+		self.xlabel = xlabel
+		self.ylabel = ylabel
+		self.cbar_label = cbar_label 
 
 	def plot( self, ax, data, axes ) : 
 
@@ -287,7 +291,7 @@ class Plotter2D( object ) :
 		# lin scale 
 		else : 
 
-			if self.use_divnorm : 
+			if self.use_divnorm and vmax != 0 and vmin != 0 : 
 
 				# for matplotlib 3.2+ 
 				try : 
@@ -297,11 +301,18 @@ class Plotter2D( object ) :
 				except : 
 					norm_class = colors.DivergingNorm
 
-				if vmax <= 0 : 
-					vmax = -vmin 
+				# only one of these can be true 
+				if vmax < 0 : 
+					vmax = abs(vmin) 
 
-				if vmin >= 0 : 
-					vmin = -vmax 
+				if vmin > 0 : 
+					vmin = -abs(vmax) 
+
+				# if vmax == 0 : 
+				# 	vmax = 1 
+
+				# if vmin == 0 : 
+				# 	vmin = -1 
 
 				norm = norm_class( vmin = vmin, vcenter = 0.0, vmax = vmax )
 				
@@ -336,7 +347,22 @@ class Plotter2D( object ) :
 		# cb.update_ticks()
 
 		# ax.set_title( self.title, pad = 20  )
-		ax.set_title( self.title)
+
+		labelsize = 14
+
+		if self.title : 
+			ax.set_title( self.title)
+
+		if self.xlabel : 
+			ax.set_xlabel( self.xlabel, fontsize = labelsize ) 
+
+		if self.ylabel : 
+			ax.set_ylabel( self.ylabel, fontsize = labelsize ) 
+
+		if self.cbar_label : 
+			cb.set_label( self.cbar_label, fontsize = labelsize )
+
+
 		# ax.ticklabel_format( style = 'sci')
 
 
@@ -678,12 +704,17 @@ def make_frame( index, osdata, timesteps,
 			figsize = figsize, squeeze = 0 )
 
 	timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
-	dt = timestep_metadata[ 'dt' ]
-	ndump = timestep_metadata[ 'ndump' ]
+	
+	try : 
+		dt = timestep_metadata[ 'dt' ]
+		ndump = timestep_metadata[ 'ndump' ]
 
-	abs_time = timesteps[ index ] * dt * ndump
+		abs_time = timesteps[ index ] * dt * ndump
 
-	suptitle += '\n%.2f$\\omega_\\mathrm{pe}^{-1}$' % abs_time
+		suptitle += '\n%.2f$\\omega_\\mathrm{pe}^{-1}$' % abs_time
+
+	except : 
+		suptitle += '\nIdx=%d' % index 
 
 	fig.suptitle( suptitle )
 

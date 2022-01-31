@@ -267,8 +267,11 @@ class InputDeckManager( object ) :
 	def get_abs_times( self, indices ) : 
 		
 		dt = self[ 'time_step' ][ 'dt' ]
-		ndump = self[ 'time_step' ][ 'ndump' ]
-		return dt * ndump * np.asarray( indices ) 
+		try :
+			ndump = self[ 'time_step' ][ 'ndump' ]
+			return dt * ndump * np.asarray( indices ) 
+		except : 
+			return np.asarray( indices ) 
 
 
 	def insert( self, idx, key ) : 
