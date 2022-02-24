@@ -255,12 +255,12 @@ class Plotter2D( object ) :
 		norm = None
 		
 		if self.vmin is None : 
-			vmin = data.min() 
+			vmin = np.nanmin( data )
 		else : 
 			vmin = self.vmin 
 
 		if self.vmax is None : 
-			vmax = data.max() 
+			vmax = np.nanmax( data )
 		else : 
 			vmax = self.vmax 
 
@@ -599,6 +599,7 @@ class Plotter1D( object ) :
 
 
 def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) : 
+
 	return lambda index :  osdata_leaf.file_managers[ index // ndump_fac ].unpack()
 
 
@@ -698,7 +699,6 @@ def make_frame( index, osdata, timesteps,
 
 	if figsize is None : 
 		figsize = ( 15, 9 )
-
 
 	fig, axarr = plt.subplots( * shape, sharex = sharex, 
 			figsize = figsize, squeeze = 0 )
