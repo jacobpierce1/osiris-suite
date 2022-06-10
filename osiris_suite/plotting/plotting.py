@@ -17,154 +17,6 @@ import matplotlib.pyplot as plt
 import pathos.multiprocessing
 
 
-
-# class MidpointLogNorm(colors.SymLogNorm):
-# 	"""
-# 	Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
-# 	e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
-
-# 	All arguments are the same as SymLogNorm, except for midpoint    
-# 	"""
-# 	def __init__(self, lin_thres, lin_scale = 1.0, midpoint=None, vmin=None, vmax=None):
-# 		self.midpoint = midpoint
-# 		self.lin_thres = lin_thres
-# 		self.lin_scale = lin_scale
-# 		#fraction of the cmap that the linear component occupies
-# 		self.linear_proportion = (lin_scale / (lin_scale + 1)) * 0.5
-# 		# print(self.linear_proportion)
-
-# 		colors.SymLogNorm.__init__(self, lin_thres, lin_scale, vmin, vmax)
-
-# 	def __get_value__(self, v, log_val, clip=None):
-# 		if v < -self.lin_thres or v > self.lin_thres:
-# 			return log_val
-
-# 		x = [-self.lin_thres, self.midpoint, self.lin_thres]
-# 		y = [0.5 - self.linear_proportion, 0.5, 0.5 + self.linear_proportion]
-# 		interpol = np.interp(v, x, y)
-# 		return interpol
-
-# 	def __call__(self, value, clip=None):
-# 		log_val = colors.SymLogNorm.__call__(self, value)
-
-# 		print( 'value:' , value )
-# 		print( value.shape )
-
-# 		out = [0] * len(value)
-# 		for i, v in enumerate(value):
-# 			print( 'v:' , v )
-# 			out[i] = self.__get_value__(v, log_val[i])
-
-# 		return np.ma.masked_array(out)
-
-
-class TwoSlopeSymLogNorm( colors.Normalize ):
-	"""
-	The symmetrical logarithmic scale is logarithmic in both the
-	positive and negative directions from the origin.
-
-	Since the values close to zero tend toward infinity, there is a
-	need to have a range around zero that is linear.  The parameter
-	*linthresh* allows the user to specify the size of this range
-	(-*linthresh*, *linthresh*).
-	"""
-	def __init__(self,  linthresh, linscale=1.0,
-	             vmin=None, vmax=None, clip=False):
-		"""
-		*linthresh*:
-		The range within which the plot is linear (to
-		avoid having the plot go to infinity around zero).
-
-		*linscale*:
-		This allows the linear range (-*linthresh* to *linthresh*)
-		to be stretched relative to the logarithmic range.  Its
-		value is the number of decades to use for each half of the
-		linear range.  For example, when *linscale* == 1.0 (the
-		default), the space used for the positive and negative
-		halves of the linear range will be equal to one decade in
-		the logarithmic range. Defaults to 1.
-		"""
-		colors.Normalize.__init__(self, vmin, vmax, clip)
-		self.linthresh = float(linthresh)
-		self._linscale_adj = (linscale / (1.0 - np.e ** -1))
-		if vmin is not None and vmax is not None:
-			self._transform_vmin_vmax()
-
-	def __call__(self, value, clip=None):
-		if clip is None:
-			clip = self.clip
-
-		result, is_scalar = self.process_value(value)
-		self.autoscale_None(result)
-		vmin, vmax = self.vmin, self.vmax
-
-		if vmin > vmax:
-			raise ValueError("minvalue must be less than or equal to maxvalue")
-		elif vmin == vmax:
-			result.fill(0)
-		else:
-			if clip:
-				mask = np.ma.getmask(result)
-				result = np.ma.array(np.clip(result.filled(vmax), vmin, vmax),
-				                     mask=mask)
-			# in-place equivalent of above can be much faster
-			resdat = self._transform(result.data)
-			# resdat -= self._lower
-			# resdat /= (self._upper - self._lower)
-			resdat = np.ma.masked_array( 
-						np.interp( resdat, [self._lower, 0, self._upper],
-						[0.0, 0.5, 1.]), mask=np.ma.getmask(resdat))
-
-		if is_scalar:
-		    result = result[0]
-		return result
-
-	def _transform(self, a):
-		"""Inplace transformation."""
-		with np.errstate(invalid="ignore"):
-			masked = np.abs(a) > self.linthresh
-		sign = np.sign(a[masked])
-		log = (self._linscale_adj + np.log(np.abs(a[masked]) / self.linthresh))
-		log *= sign * self.linthresh
-		a[masked] = log
-		a[~masked] *= self._linscale_adj
-		return a
-
-	# def _inv_transform(self, a):
-	# 	"""Inverse inplace Transformation."""
-	# 	masked = np.abs(a) > (self.linthresh * self._linscale_adj)
-	# 	sign = np.sign(a[masked])
-	# 	exp = np.exp(sign * a[masked] / self.linthresh - self._linscale_adj)
-	# 	exp *= sign * self.linthresh
-	# 	a[masked] = exp
-	# 	a[~masked] /= self._linscale_adj
-	# 	return a
-
-	def _transform_vmin_vmax(self):
-		"""Calculates vmin and vmax in the transformed system."""
-		vmin, vmax = self.vmin, self.vmax
-		arr = np.array([vmax, vmin]).astype(float)
-		self._upper, self._lower = self._transform(arr)
-
-	# def inverse(self, value):
-	# 	if not self.scaled():
-	# 		raise ValueError("Not invertible until scaled")
-	# 	val = np.ma.asarray(value)
-	# 	val = val * (self._upper - self._lower) + self._lower
-	# 	return self._inv_transform(val)
-
-	def autoscale(self, A):
-		# docstring inherited.
-		super().autoscale(A)
-		self._transform_vmin_vmax()
-
-
-	def autoscale_None(self, A):
-		# docstring inherited.
-		super().autoscale_None(A)
-		self._transform_vmin_vmax()
-
-
 class PlotManager( object ) : 
 
 	def __init__( self, data_getter, plotter, 
@@ -173,7 +25,6 @@ class PlotManager( object ) :
 		self.data_getter = data_getter
 		self.plotter = plotter 
 		self.modifier_function = modifier_function
-		# self.ax = ax 
 
 
 	def plot( self, ax, timestep ) : 
@@ -189,7 +40,7 @@ class PlotManager( object ) :
 		self.plotter.plot( ax, data, axes ) 
 
 		if self.modifier_function is not None : 
-			self.modifier_function( ax, data, axes ) 
+			self.modifier_function( ax, data, axes, timestep ) 
 
 
 
@@ -199,10 +50,10 @@ class Plotter2D( object ) :
 	def __init__(	self, cmap = None, 
 					logscale = False, sym_logscale = False,
 					title = '', log_min = 1e-10,
-					bounds = None,
+					bounds = None, if_abs = False,
 					use_divnorm = False,
 					vmin = None, vmax = None,
-					xlabel = None, ylabel = None, cbar_label = None ) :
+					xlabel = None, ylabel = None, cbar_label = None, add_cbar = True ) :
 	
 		if cmap is None : 
 			self.cmap = colorcet.m_rainbow
@@ -221,6 +72,8 @@ class Plotter2D( object ) :
 		self.xlabel = xlabel
 		self.ylabel = ylabel
 		self.cbar_label = cbar_label 
+		self.add_cbar = add_cbar
+		self.if_abs = if_abs 
 
 	def plot( self, ax, data, axes ) : 
 
@@ -229,13 +82,16 @@ class Plotter2D( object ) :
 		# 	aspect = ( axes[0][1] - axes[0][0] ) / ( axes[1][1] - axes[1][0] ) 
 		# else : 
 		# 	aspect = 'equal'
+		axes = np.asarray( axes ) 
 		new_axes = np.copy( axes ) 
 
-		if self.bounds : 
+		ops = [ max, min ]
+
+		if self.bounds is not None : 
 			for i in range(2) : 
 				for j in range(2) : 
 					if self.bounds[i][j] is not None : 
-						new_axes[i,j] = self.bounds[i][j]
+						new_axes[i,j] = ops[j]( new_axes[i,j], self.bounds[i][j] )
 
 			dx = ( axes[:,1] - axes[:,0] ) / data.shape
 			imin = np.floor( (new_axes[:,0] - axes[:,0]) / dx ).astype( int ) 
@@ -246,13 +102,14 @@ class Plotter2D( object ) :
 		else : 
 			new_axes = axes 
 
-		# print( new_axes )
-
 		aspect = ( new_axes[0][1] - new_axes[0][0] ) / ( new_axes[1][1] - new_axes[1][0] ) 
 
 		extent = [new_axes[0][0], new_axes[0][1], new_axes[1][0], new_axes[1][1] ]
 
 		norm = None
+
+		if( self.if_abs ) : 
+			data = np.abs( data )
 		
 		if self.vmin is None : 
 			vmin = np.nanmin( data )
@@ -324,31 +181,16 @@ class Plotter2D( object ) :
 						origin = 'lower', aspect = aspect, extent = extent,
 						norm = norm )
 
+		if self.add_cbar : 
+			cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04 )
 
-
-		# im = ax.pcolormesh( data, axes[0], axes[1], 
-		# 						cmap = self.cmap, norm = norm )
-
-		# divider = make_axes_locatable(ax)
-		# cax = divider.append_axes( "right", size="5%", pad=0.05)
-		# cax = fig.add_axes([ax.get_position().x1+0.005,ax.get_position().y0,0.02,ax.get_position().height])
-
-		cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04 )
-
-		# cb = plt.colorbar( im, ax = ax, fraction = 0.046, pad = 0.04, 
-		# 					format =  '%.0e' )
-
-
-		# cb = fig.colorbar( im, cax = cax ) # format = '%.1e' )
-		# cb = add_colorbar( im ) 
-
-		if not ( self.logscale or self.sym_logscale )  :
-			cb.formatter.set_powerlimits((0, 0))
-		# cb.update_ticks()
+			if not ( self.logscale or self.sym_logscale )  :
+		
+				cb.formatter.set_powerlimits((0, 0))
 
 		# ax.set_title( self.title, pad = 20  )
 
-		labelsize = 14
+		labelsize = 18
 
 		if self.title : 
 			ax.set_title( self.title)
@@ -359,8 +201,9 @@ class Plotter2D( object ) :
 		if self.ylabel : 
 			ax.set_ylabel( self.ylabel, fontsize = labelsize ) 
 
-		if self.cbar_label : 
-			cb.set_label( self.cbar_label, fontsize = labelsize )
+		if self.add_cbar : 
+			if self.cbar_label : 
+				cb.set_label( self.cbar_label, fontsize = labelsize )
 
 
 		# ax.ticklabel_format( style = 'sci')
@@ -550,50 +393,61 @@ class Plotter2DProj1D( object ) :
 
 class Plotter1D( object ) : 
 
-	def __init__( 	self, multiple_data = False,
-					colors = None, linestyles = None, labels = None,
-					logy = 0, title = '' ) : 
-
-		if not multiple_data : 
-			colors = ( colors, )
-			linestyles = ( linestyles, )
-			labels = ( labels, )			
-
-		self.multiple_data = multiple_data
-		self.colors = colors 
-		self.linestyles = linestyles 
-		self.labels = labels 
-		self.logy = logy
-		self.title = title
+	def __init__( 	self, multiple_data = False, **kwargs ) : 
+		
+		self.multiple_data = multiple_data 
+		self.kwargs = kwargs 
 
 
 	def plot( self, ax, data, axes ) : 
+
+		plot_legend = False
+
+		if 'plot_kwargs' in self.kwargs : 
+			plot_kwargs = self.kwargs[ 'plot_kwargs' ]
+		else : 
+			plot_kwargs = None
 
 		# if multiple data are not supplied, package data into tuple
 		# so we don't need to rewrite code below. 
 		if not self.multiple_data : 
 			data = (data,)
 			axes = (axes,)
+			plot_kwargs = (plot_kwargs,)
 
 		for i in range( len( data ) ) : 
 
-			c = None if self.colors is None else self.colors[i]
-			linestyle = None if self.linestyles is None else self.linestyles[i]
-			label = None if self.labels is None else self.labels[i]
+			# c = None if self.colors is None else self.colors[i]
+			# linestyle = None if self.linestyles is None else self.linestyles[i]
+			# label = None if self.labels is None else self.labels[i]
 
 			xaxis = np.linspace( axes[i][0][0], axes[i][0][1], len( data[i]) )
 
-			ax.plot( xaxis, data[i], 
-					 c = c, linestyle = linestyle, label = label )
+			ax.plot( xaxis, data[i], **plot_kwargs[i] )
 
-		ax.set_title( self.title ) 
+			if( 'label' in plot_kwargs[i] ) : 
+				plot_legend = True 
 
-		if self.logy : 
-			ax.set_yscale( 'log' )
+		# ax.margins(x=0)
+		# ax.margins(y=0)
 
-		# else : 
-		# 	ax.ticklabel_format( style = 'sci')
-		if self.labels is not None : 
+		if 'xlabel' in self.kwargs : 
+			ax.set_xlabel( self.kwargs[ 'xlabel' ])
+
+		if 'ylabel' in self.kwargs : 
+			ax.set_ylabel( self.kwargs[ 'ylabel' ] )
+
+		if 'title' in self.kwargs : 
+			ax.set_title( self.kwargs[ 'title' ] ) 
+
+		if 'logy' in self.kwargs :
+			if self.kwargs[ 'logy' ] : 
+				ax.set_yscale( 'log' )
+
+		if 'ymax' in self.kwargs : 
+			ax.set_ylim( ymax = self.kwargs[ 'ymax' ] )
+
+		if plot_legend : 
 			ax.legend( loc = 'best' )
 
 
@@ -609,7 +463,7 @@ def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None,
 							title = '',
 							ndump_fac = 1, bounds = None,
 							log_min = 1e-8, use_divnorm = False,
-							vmin = None, vmax = None ) : 
+							vmin = None, vmax = None, if_abs = False ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	plotter = Plotter2D( 	cmap = cmap, 	
@@ -617,7 +471,7 @@ def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None,
 							title = title, 
 							bounds = bounds,
 							use_divnorm = use_divnorm, log_min = log_min,
-							vmin = vmin, vmax = vmax )
+							vmin = vmin, vmax = vmax, if_abs = if_abs )
 
 	return PlotManager( data_getter, plotter, modifier_function )
 
@@ -626,7 +480,8 @@ def raw_osdata_TS1D_plot_mgr( 	osdata_leaf, modifier_function = None,
 								colors = None, linestyles = None, 
 								labels = None,
 								logy = 0, title = '',
-								ndump_fac = 1 ) : 
+								ndump_fac = 1,
+								**kwargs ) : 
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 	
@@ -635,7 +490,8 @@ def raw_osdata_TS1D_plot_mgr( 	osdata_leaf, modifier_function = None,
 						 linestyles = linestyles, 
 						 labels = labels,
 					     logy = logy, 
-					     title = title )
+					     title = title,
+					     **kwargs )
 
 	return PlotManager( data_getter, plotter, modifier_function )
 
@@ -663,8 +519,9 @@ def ffmpeg_combine( plotdir, movie_name, duration ):
 	nfiles = len( pngfiles ) 
 
 	# frame_rate = min( 1, nfiles // duration )
-	frame_rate = nfiles / duration
+	frame_rate = nfiles / duration	
 	command = 'ffmpeg -r %f -i %s%%*.png -vcodec libx264 -crf 25 -pix_fmt yuv420p -y %s' % ( 
+	# command = 'ffmpeg -r %f -i %s%%*.png -y %s' % ( 
     	frame_rate, plotdir, movie_name ) 
 	print( command ) 
 	os.system( command )
@@ -690,18 +547,11 @@ def ffmpeg_combine( plotdir, movie_name, duration ):
 
 
 
-def make_frame( index, osdata, timesteps,
-				shape, plot_mgr_arr, 
-				suptitle = '', 
-				figsize = None, subplots_adjust = None, sharex = False ) : 
 
-	N, M = shape 
 
-	if figsize is None : 
-		figsize = ( 15, 9 )
+def default_suptitle_function( osdata, timesteps, index ) : 
 
-	fig, axarr = plt.subplots( * shape, sharex = sharex, 
-			figsize = figsize, squeeze = 0 )
+	suptitle = ''
 
 	timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
 	
@@ -716,7 +566,27 @@ def make_frame( index, osdata, timesteps,
 	except : 
 		suptitle += '\nIdx=%d' % index 
 
-	fig.suptitle( suptitle )
+
+	return suptitle 
+
+
+
+def make_frame( index, osdata, timesteps,
+				shape, plot_mgr_arr, 
+				suptitle_function = default_suptitle_function, 
+				figsize = None, subplots_adjust_kwargs = None, sharex = False ) : 
+
+	N, M = shape 
+
+	if figsize is None : 
+		figsize = ( 15, 9 )
+
+	fig, axarr = plt.subplots( * shape, sharex = sharex, 
+			figsize = figsize, squeeze = 0 )
+
+	if suptitle_function : 
+		suptitle = suptitle_function( osdata, timesteps, index )
+		fig.suptitle( suptitle )
 
 	# make all plots 
 	for i in range( N ) : 
@@ -730,9 +600,8 @@ def make_frame( index, osdata, timesteps,
 			else : 
 				fig.delaxes( axarr[i,j] ) 
 
-	if subplots_adjust is not None : 
-		hspace, wspace = subplots_adjust
-		fig.subplots_adjust( hspace = hspace, wspace = wspace )
+	if subplots_adjust_kwargs is not None : 
+		fig.subplots_adjust( **subplots_adjust_kwargs )
 
 	# plt.tight_layout(h_pad=1)
 
@@ -741,10 +610,12 @@ def make_frame( index, osdata, timesteps,
 
 
 
+
+
 def make_TS_movie(  osdata, timesteps,
 					plot_mgr_arr, 
-					suptitle = '', 
-					figsize = None, subplots_adjust = None,
+					suptitle_function = default_suptitle_function, 
+					figsize = None, subplots_adjust_kwargs = None,
 					savedir = None, 
 					frame_startup_function = None,
 					frame_cleanup_function = None,
@@ -818,7 +689,7 @@ def make_TS_movie(  osdata, timesteps,
 		fig, axarr = make_frame( index,
 								 osdata, timesteps,
 								 shape, plot_mgr_arr, 
-								 suptitle, figsize, subplots_adjust,
+								 suptitle_function, figsize, subplots_adjust_kwargs,
 								 sharex )
 
 		if global_modifier_function is not None : 
@@ -827,7 +698,7 @@ def make_TS_movie(  osdata, timesteps,
 		if frame_cleanup_function is not None : 
 			frame_cleanup_function( index )
 
-		path = frame_savedir + '/%03d' % i
+		path = frame_savedir + '/%05d' % i
 		
 		if show : 
 			plt.savefig( path + '.pdf' ) 
