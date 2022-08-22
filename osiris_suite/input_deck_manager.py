@@ -246,7 +246,7 @@ class InputDeckManager( object ) :
 				else : 
 					val_str = val_to_string( val ) 
 
-				s += '\t%s = %s\n' % ( str(key), val_str )
+				s += '  %s = %s\n' % ( str(key), val_str )
 
 			s += '}'
 
