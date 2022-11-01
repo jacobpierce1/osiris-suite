@@ -8,307 +8,307 @@ from .helper_classes import OsirisSuiteError
 
 class InputDeckManager( object ) : 
 
-	def __init__( self, path = None ) : 
+    def __init__( self, path = None ) : 
 
-		self.path = path
+        self.path = path
 
-		# list of keys, e.g. simulation, node_conf, etc.
-		self.keys = []
-		
-		# list of OrderedDicts containing the corresponding metadata 
-		# for each entry of self.keys 
-		self.metadata = [] 
+        # list of keys, e.g. simulation, node_conf, etc.
+        self.keys = []
+        
+        # list of OrderedDicts containing the corresponding metadata 
+        # for each entry of self.keys 
+        self.metadata = [] 
 
-		if path is not None : 
-			self.read() 
+        if path is not None : 
+            self.read() 
 
 
-	def copy( self ) : 
-		copy = type( self )()
-		copy.keys = self.keys.copy()
-		copy.metadata = [] # [ x.copy() for x in self.metadata ]
+    def copy( self ) : 
+        copy = type( self )()
+        copy.keys = self.keys.copy()
+        copy.metadata = [] # [ x.copy() for x in self.metadata ]
 
-		# the numpy arrays have to be separately copied
-		for odict in self.metadata :
-			odict_copy = collections.OrderedDict()  
-			for key, val in odict.items() :
-				if isinstance( val, np.ndarray ) : 			
-					odict_copy[key] = val.copy() 
-				else : 
-					odict_copy[key] = val 
-			copy.metadata.append( odict_copy )
+        # the numpy arrays have to be separately copied
+        for odict in self.metadata :
+            odict_copy = collections.OrderedDict()  
+            for key, val in odict.items() :
+                if isinstance( val, np.ndarray ) :            
+                    odict_copy[key] = val.copy() 
+                else : 
+                    odict_copy[key] = val 
+            copy.metadata.append( odict_copy )
 
-		return copy 
+        return copy 
 
 
-	# read an input deck 
-	def read( self, path = None ) : 
+    # read an input deck 
+    def read( self, path = None ) : 
 
-		if path is None : 
-			path = self.path 
+        if path is None : 
+            path = self.path 
 
-		try : 
-			with open( self.path ) as f : 
-				text = f.read()
-		except :
-			raise OsirisSuiteError( 'ERROR: unable to open input deck: %s' % self.path )
+        try : 
+            with open( self.path ) as f : 
+                text = f.read()
+        except :
+            raise OsirisSuiteError( 'ERROR: unable to open input deck: %s' % self.path )
 
-		self.keys = []
-		self.metadata = []
+        self.keys = []
+        self.metadata = []
 
-		# remove comments 
-		text = re.sub( r'!.*\n', '', text )
+        # remove comments 
+        text = re.sub( r'!.*\n', '', text )
 
-		# remove newlines 
-		text = text.replace( '\n', '' )			
+        # remove newlines 
+        text = text.replace( '\n', '' )            
 
-		matches = re.findall( r'(.*?){(.*?)}', text )
+        matches = re.findall( r'(.*?){(.*?)}', text )
 
-		self.keys = [ x[0].strip() for x in matches ] 
+        self.keys = [ x[0].strip() for x in matches ] 
 
-		# print( self.keys ) 
+        # print( self.keys ) 
 
-		for key, metadata in matches : 
-						
-			cur_metadata = collections.OrderedDict()
-			self.metadata.append( cur_metadata )
+        for key, metadata in matches : 
 
-			metadata_split = re.findall( r'(.*?)=([^=(]*),', metadata )
+            cur_metadata = collections.OrderedDict()
+            self.metadata.append( cur_metadata )
 
-			for metadata_key, metadata_val in metadata_split : 
+            metadata_split = re.findall( r'(.*?)=([^=(]*),', metadata )
 
-				metadata_key = metadata_key.strip()
-				metadata_val = metadata_val.strip() 
+            for metadata_key, metadata_val in metadata_split : 
 
-				# first split into quote pairs -- we use this for if it's a string 
-				metadata_val_split = re.findall( r'(\".+?\")', metadata_val )
+                metadata_key = metadata_key.strip()
+                metadata_val = metadata_val.strip() 
 
-				# no match: is not string, split by commas instead.  
-				if len(metadata_val_split ) == 0 : 
-	
-					metadata_val_split = metadata_val.split( ',' )
+                # first split into quote pairs -- we use this for if it's a string 
+                metadata_val_split = re.findall( r'(\".+?\")', metadata_val )
 
-				# print( metadata_val_split )
+                # no match: is not string, split by commas instead.  
+                if len(metadata_val_split ) == 0 : 
+    
+                    metadata_val_split = metadata_val.split( ',' )
 
-				is_arr = ( len( metadata_val_split ) > 1 ) 
+                # print( metadata_val_split )
 
-				# in either case, try to store it as a float.
-				# if unsuccessful, keep the string version
-				# type casting of the key is not currently supported
-				# because of the challenges this introduces 
-				# in conjuction with how rarely this would be useful
+                is_arr = ( len( metadata_val_split ) > 1 ) 
 
-				bool_strs = [ '.true.', '.false.' ]
+                # in either case, try to store it as a float.
+                # if unsuccessful, keep the string version
+                # type casting of the key is not currently supported
+                # because of the challenges this introduces 
+                # in conjuction with how rarely this would be useful
 
-				if is_arr : 
+                bool_strs = [ '.true.', '.false.' ]
 
-					if metadata_val_split[0] in bool_strs :
+                if is_arr : 
 
-						true_mask = np.array( [ b.strip() == '.true.' for b in metadata_val_split ] )
-						
-						metadata_val = np.zeros_like( metadata_val_split, dtype = bool )
-						metadata_val[ true_mask ] = True
-						metadata_val[ ~true_mask ] = False
+                    if metadata_val_split[0] in bool_strs :
 
-					else : 
-						# try int array
-						try : 
-							metadata_val = np.array( metadata_val_split, dtype = int )
-						except : 
-							# try float array
-							try : 
-								metadata_val = np.array( metadata_val_split, dtype = float )
-							# try string array
-							except : 
-								for i in range( len( metadata_val_split)) : 
-									metadata_val_split[i] = metadata_val_split[i].strip( ' ' ).replace( '"', '' )
-								metadata_val = np.array( metadata_val_split, dtype = str )
+                        true_mask = np.array( [ b.strip() == '.true.' for b in metadata_val_split ] )
 
-				else : 
+                        metadata_val = np.zeros_like( metadata_val_split, dtype = bool )
+                        metadata_val[ true_mask ] = True
+                        metadata_val[ ~true_mask ] = False
 
-					if metadata_val in bool_strs : 
-						metadata_val = True if (metadata_val == '.true.' ) else False
+                    else : 
+                        # try int array
+                        try : 
+                            metadata_val = np.array( metadata_val_split, dtype = int )
+                        except : 
+                            # try float array
+                            try : 
+                                metadata_val = np.array( metadata_val_split, dtype = float )
+                            # try string array
+                            except : 
+                                for i in range( len( metadata_val_split)) : 
+                                    metadata_val_split[i] = metadata_val_split[i].strip( ' ' ).replace( '"', '' )
+                                metadata_val = np.array( metadata_val_split, dtype = str )
 
-					else : 
-						# try int 
-						try : 
-							metadata_val = int( metadata_val )
-						except :
-							# try float
-							try :
-								metadata_val = float( metadata_val )
-							# last case: do nothing since it's already a string  
-							except : 
-								metadata_val = metadata_val.replace( '"', '' )
-							
-				cur_metadata[ metadata_key ] = metadata_val 
+                else : 
 
-				# print( metadata_key ) 
-				# print( metadata_val ) 
+                    if metadata_val in bool_strs : 
+                        metadata_val = True if (metadata_val == '.true.' ) else False
 
+                    else : 
+                        # try int 
+                        try : 
+                            metadata_val = int( metadata_val )
+                        except :
+                            # try float
+                            try :
+                                metadata_val = float( metadata_val )
+                            # last case: do nothing since it's already a string  
+                            except : 
+                                metadata_val = metadata_val.replace( '"', '' )
 
-	# write the data into an input deck
-	def write( self, path ) : 
+                cur_metadata[ metadata_key ] = metadata_val 
 
-		with open( path, 'w' ) as f : 
-			f.write( str( self ) )
+                # print( metadata_key ) 
+                # print( metadata_val ) 
 
 
+    # write the data into an input deck
+    def write( self, path ) : 
 
-	def get_metadata( self, key, occurrence = 0, truncate_strings = 1 ) : 
+        with open( path, 'w' ) as f : 
+            f.write( str( self ) )
 
-		'''
-		trunacte_strings = 1 will remove the double quotes from 
-				strings in the input deck when fetching metadata 
-		'''
 
-		if key not in self.keys :
-			raise OsirisSuiteError( 
-				'ERROR: key is not in input deck: %s' % str(key) )
 
-		# get indices which match key 
-		indices = [ i for i, x in enumerate( self.keys ) if x == key ]
+    def get_metadata( self, key, occurrence = 0, truncate_strings = 1 ) : 
 
-		idx = indices[ occurrence ] 
+        '''
+        trunacte_strings = 1 will remove the double quotes from 
+                strings in the input deck when fetching metadata 
+        '''
 
-		return self.metadata[ idx ] 
+        if key not in self.keys :
+            raise OsirisSuiteError( 
+                'ERROR: key is not in input deck: %s' % str(key) )
 
+        # get indices which match key 
+        indices = [ i for i, x in enumerate( self.keys ) if x == key ]
 
+        idx = indices[ occurrence ] 
 
-	def __getitem__( self, attr_occurrence_val_tuple ) :
+        return self.metadata[ idx ] 
 
-		x = attr_occurrence_val_tuple
 
-		if isinstance( x, tuple ) : 
-			attr = x[0] 
 
-			if len( x ) > 1 : 
-				occurrence = x[1] 
-			else : 
-				occurrence = 0 
+    def __getitem__( self, attr_occurrence_val_tuple ) :
 
-			if len(x) > 2 : 
-				val = x[2] 
-			else : 
-				val = None 
+        x = attr_occurrence_val_tuple
 
-		else : 
-			attr = x
-			occurrence = 0
-			val = None
+        if isinstance( x, tuple ) : 
+            attr = x[0] 
 
-		metadata = self.get_metadata( attr, occurrence )
+            if len( x ) > 1 : 
+                occurrence = x[1] 
+            else : 
+                occurrence = 0 
 
-		if val is None : 
-			return metadata
+            if len(x) > 2 : 
+                val = x[2] 
+            else : 
+                val = None 
 
-		else : 
-			return metadata[ val ]
+        else : 
+            attr = x
+            occurrence = 0
+            val = None
 
+        metadata = self.get_metadata( attr, occurrence )
 
+        if val is None : 
+            return metadata
 
-	def __setitem__( self, attr_and_occurrence, val ) : 
+        else : 
+            return metadata[ val ]
 
-		if isinstance( attr_and_occurrence, tuple ) : 
-			attr, occurrence = attr_and_occurrence
-		else : 
-			attr = attr_and_occurrence
-			occurrence = 0
 
-		if key not in self.keys :
-			raise OsirisSuiteError( 
-				'ERROR: key is not in input deck: %s' % str(key) )
 
-		# get indices which match key 
-		indices = [ i for i, x in enumerate( self.keys ) if x == key ]
+    def __setitem__( self, attr_and_occurrence, val ) : 
 
-		idx = indices[ occurrence ] 
+        if isinstance( attr_and_occurrence, tuple ) : 
+            attr, occurrence = attr_and_occurrence
+        else : 
+            attr = attr_and_occurrence
+            occurrence = 0
 
-		self.metadata[ idx ] = val 
+        if key not in self.keys :
+            raise OsirisSuiteError( 
+                'ERROR: key is not in input deck: %s' % str(key) )
 
+        # get indices which match key 
+        indices = [ i for i, x in enumerate( self.keys ) if x == key ]
 
+        idx = indices[ occurrence ] 
 
-	def __str__( self ) : 
+        self.metadata[ idx ] = val 
 
-		n = len( self.keys ) 
 
-		s = ''
 
-		for i in range( n ) : 
+    def __str__( self ) : 
 
-			s += self.keys[i] 
-			s += '\n{\n'
+        n = len( self.keys ) 
 
-			for key, val in self.metadata[i].items() : 
+        s = ''
 
-				if isinstance( val, np.ndarray ) : 
-					val_str = array_to_string( val )
-				else : 
-					val_str = val_to_string( val ) 
+        for i in range( n ) : 
 
-				s += '\t%s = %s\n' % ( str(key), val_str )
+            s += self.keys[i] 
+            s += '\n{\n'
 
-			s += '}'
+            for key, val in self.metadata[i].items() : 
 
-			s += '\n\n'
+                if isinstance( val, np.ndarray ) : 
+                    val_str = array_to_string( val )
+                else : 
+                    val_str = val_to_string( val ) 
 
-		return s 
+                s += '  %s = %s\n' % ( str(key), val_str )
 
+            s += '}'
 
-	def num_occurrences( self, key ) : 
+            s += '\n\n'
 
-		# get indices which match key 
-		indices = [ i for i, x in enumerate( self.keys ) if x == key ]
+        return s 
 
-		return len( indices ) 
 
+    def num_occurrences( self, key ) : 
 
-	# utilities 
-	def get_abs_times( self, indices ) : 
-		
-		dt = self[ 'time_step' ][ 'dt' ]
-		try :
-			ndump = self[ 'time_step' ][ 'ndump' ]
-			return dt * ndump * np.asarray( indices ) 
-		except : 
-			return np.asarray( indices ) 
+        # get indices which match key 
+        indices = [ i for i, x in enumerate( self.keys ) if x == key ]
 
+        return len( indices ) 
 
-	def insert( self, idx, key ) : 
 
-		self.keys.insert( idx, key ) 
-		self.metadata.insert( idx, collections.OrderedDict() )
+    # utilities 
+    def get_abs_times( self, indices ) : 
+        
+        dt = self[ 'time_step' ][ 'dt' ]
+        try :
+            ndump = self[ 'time_step' ][ 'ndump' ]
+            return dt * ndump * np.asarray( indices ) 
+        except : 
+            return np.asarray( indices ) 
+
+
+    def insert( self, idx, key ) : 
+
+        self.keys.insert( idx, key ) 
+        self.metadata.insert( idx, collections.OrderedDict() )
 
 
 # def string_to_array( string ) : 
 
-# 	...
+#     ...
 
 
 def array_to_string( arr ) : 
 
-	ret = '' 
+    ret = '' 
 
-	for x in arr : 
-		ret += val_to_string( x ) 
-		ret += ' '
-		# ret += ','
+    for x in arr : 
+        ret += val_to_string( x ) 
+        ret += ' '
+        # ret += ','
 
-	return ret 
+    return ret 
 
 
 
 def val_to_string( val ) : 
 
-	if isinstance( val, (bool, np.bool_ ) ) : 
-		ret = '.true.' if val else '.false.'
+    if isinstance( val, (bool, np.bool_ ) ) : 
+        ret = '.true.' if val else '.false.'
 
-	elif isinstance( val, str ) : 
-		ret = '"' + str( val ) + '"'
+    elif isinstance( val, str ) : 
+        ret = '"' + str( val ) + '"'
 
-	else : 
-		ret = str( val ) 
+    else : 
+        ret = str( val ) 
 
-	ret += ','
+    ret += ','
 
-	return ret 
+    return ret 
