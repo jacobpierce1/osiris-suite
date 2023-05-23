@@ -47,34 +47,96 @@ class PlotManager( object ) :
 
 class Plotter2D( object ) : 
 
-	def __init__(	self, cmap = None, 
-					logscale = False, sym_logscale = False,
-					title = '', log_min = 1e-10,
-					bounds = None, if_abs = False,
-					use_divnorm = False,
-					vmin = None, vmax = None,
-					xlabel = None, ylabel = None, cbar_label = None, add_cbar = True ) :
-	
-		if cmap is None : 
+	def __init__(	self, **kwargs ) :
+
+		try :
+			self.bounds = kwargs[ 'bounds' ]
+		except :
+			self.bounds = None
+
+		try :
+			self.vmin = kwargs['vmin']
+		except :
+			self.vmin = None
+
+		try :
+	       		self.vmax = kwargs['vmax']
+		except :
+			self.vmax = None
+
+		try :
+	       		self.if_abs = kwargs['if_abs']
+		except :
+			self.if_abs = False
+
+		try :
+	       		self.sym_logscale = kwargs['sym_logscale']
+		except :
+			self.sym_logscale = False
+
+		try :
+	       		self.use_divnorm = kwargs['use_divnorm']
+		except :
+			self.use_divnorm = False
+
+		try :
+	       		self.logscale = kwargs['logscale']
+		except :
+			self.logscale = False
+
+		try :
+	       		self.log_min = kwargs['log_min']
+		except :
+			self.log_min = None
+			
+		try :
+	       		self.title = kwargs['title']
+		except :
+			self.title = ''
+
+		try :
+	       		self.xlabel = kwargs['xlabel']
+		except :
+			self.xlabel = ''
+
+		try :
+	       		self.ylabel = kwargs['ylabel']
+		except :
+			self.ylabel = ''
+
+		try :
+	       		self.add_cbar = kwargs['add_cbar']
+		except :
+			self.add_cbar = True
+
+		try :
+	       		self.cbar_label = kwargs['cbar_label']
+		except :
+			self.cbar_label = ''
+			
+		try :
+	       		self.cmap = kwargs['cmap']
+		except :
 			self.cmap = colorcet.m_rainbow
-		else : 
-			self.cmap = cmap 
 
-		self.logscale = logscale
-		self.sym_logscale = sym_logscale
-		self.title = title
-		self.log_min = log_min 
-		self.use_divnorm = use_divnorm
-		self.bounds = bounds 
-		self.interpolation = 'bilinear'
-		self.vmin = vmin
-		self.vmax = vmax 
-		self.xlabel = xlabel
-		self.ylabel = ylabel
-		self.cbar_label = cbar_label 
-		self.add_cbar = add_cbar
-		self.if_abs = if_abs 
+		try :
+	       		self.interpolation = kwargs['interpolation']
+		except :
+			self.interpolation = None
+			
+		try :
+			self.transpose = kwargs[ 'transpose' ]
+		except :
+			self.transpose = True
 
+		try :
+			self.flipaxis = kwargs[ 'flipaxis' ]
+		except :
+			self.flipaxis = None
+
+		
+		
+		
 	def plot( self, ax, data, axes ) : 
 
 		# if aspect is None : 
@@ -91,7 +153,7 @@ class Plotter2D( object ) :
 			for i in range(2) : 
 				for j in range(2) : 
 					if self.bounds[i][j] is not None : 
-						new_axes[i,j] = ops[j]( new_axes[i,j], self.bounds[i][j] )
+						new_axes[i,j] = ops[j]( new_axes[i,j], self.kwargs['bounds'][i][j] )
 
 			dx = ( axes[:,1] - axes[:,0] ) / data.shape
 			imin = np.floor( (new_axes[:,0] - axes[:,0]) / dx ).astype( int ) 
@@ -102,6 +164,12 @@ class Plotter2D( object ) :
 		else : 
 			new_axes = axes 
 
+		if self.transpose : 
+			data = data.T 
+
+		if self.flipaxis is not None  :
+			data = np.flip( data, axis = self.flipaxis ) 
+			
 		aspect = ( new_axes[0][1] - new_axes[0][0] ) / ( new_axes[1][1] - new_axes[1][0] ) 
 
 		extent = [new_axes[0][0], new_axes[0][1], new_axes[1][0], new_axes[1][1] ]
@@ -306,41 +374,110 @@ class PlotManagerStack( object ) :
 
 class Plotter2DProj1D( object ) : 
 
-	def __init__( self, logy = 0, title = '', ifvertical = False, axis = 0,
-					ifplotave = False, ifplotmiddle = False, 
-					ifplotidx = False, plotidx = 0, iflegend = False,
-					xlabel = '', ylabel = '', aspect = None,
-					ymin = None, ymax = None ) : 
+	def __init__( self, **kwargs ) :
 
-		if axis not in [0, 1] : 
-			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
+		try :
+			self.logy = kwargs['logy']
+		except :
+			self.logy = 0
+			
+		try :
+			self.title = kwargs['title']
+		except :
+			self.title = ''
+			
+		try :
+			self.ifvertical = kwargs['ifvertical']
+		except :
+			self.ifvertical = False
+			
+		try :
+			self.axis = kwargs['axis']
+			
+			if axis not in [0, 1] : 
+				raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
 
-		self.logy = logy
-		self.title = title 
-		self.ifvertical = ifvertical
-		self.axis = axis 
-		self.ifplotave = ifplotave
-		self.ifplotmiddle = ifplotmiddle
-		self.ifplotidx = ifplotidx
-		self.plotidx = plotidx 
-		self.iflegend = iflegend 
-		self.xlabel = xlabel 
-		self.ylabel = ylabel 
-		self.aspect = aspect 
-		self.ymin = ymin
-		self.ymax = ymax
+		except :
+			self.axis = 0
 
+		try :
+			self.ifplotave = kwargs['ifplotave']
+		except :
+			self.ifplotave = False
 
+		try : 
+			self.ifplotmiddle = kwargs['ifplotmiddle']
+		except :
+			self.ifplotmiddle = False 
+
+		try : 
+			self.ifplotidx = kwargs['ifplotidx']
+		except :
+			self.ifplotidx = False
+
+		try : 
+			self.plotidx = kwargs['plotidx']
+		except :
+			self.plotidx = 0
+
+		try : 
+			self.iflegend = kwargs['iflegend']
+		except :
+			self.iflegend = False 
+		
+		try :
+			self.xlabel = kwargs['xlabel']
+		except :
+			self.xlabel = ''
+
+		try : 
+			self.ylabel = kwargs['ylabel']
+		except :
+			self.ylabel = None
+
+		try :
+			self.aspect = kwargs['aspect']
+		except :
+			self.aspect = None
+			
+		try :
+			self.ymin = kwargs['ymin']
+		except :
+			self.ymin = None 
+
+		try :
+			self.ymax = kwargs['ymax']
+		except :
+			self.ymax = None 
+
+		try :
+			self.transpose = kwargs[ 'transpose' ]
+		except :
+			self.transpose = False
+
+		try :
+			self.flipaxis = kwargs[ 'flipaxis' ]
+		except :
+			self.flipaxis = None
+			
+
+			
 	def plot( self, ax, data, axes ) : 
 
 		if data.ndim != 2 : 
 			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
-			
+
+		if self.transpose : 
+			data = data.T 
+
+		if self.flipaxis is not None  :
+			data = np.flip( data, axis = self.flipaxis ) 
+		
 		xaxis = np.linspace(  axes[self.axis][0], 
 					axes[self.axis][1], data.shape[self.axis] )
 
 		ax.set_xlim( axes[self.axis][0], axes[self.axis][1] )
-
+		
 		if self.ifplotave : 
 			aveaxis = 1 - self.axis
 			ax.plot( xaxis, np.average( data, axis = aveaxis ), c='r',
@@ -406,7 +543,7 @@ class Plotter1D( object ) :
 		if 'plot_kwargs' in self.kwargs : 
 			plot_kwargs = self.kwargs[ 'plot_kwargs' ]
 		else : 
-			plot_kwargs = None
+			plot_kwargs = {}
 
 		# if multiple data are not supplied, package data into tuple
 		# so we don't need to rewrite code below. 
@@ -447,6 +584,14 @@ class Plotter1D( object ) :
 		if 'ymax' in self.kwargs : 
 			ax.set_ylim( ymax = self.kwargs[ 'ymax' ] )
 
+		if 'ymin' in self.kwargs : 
+			ax.set_ylim( ymin = self.kwargs[ 'ymin' ] )
+
+		if 'aspect' in self.kwargs : 
+			xleft, xright = ax.get_xlim()
+			ybottom, ytop = ax.get_ylim()
+			ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)) * self.kwargs['aspect'] )
+
 		if plot_legend : 
 			ax.legend( loc = 'best' )
 
@@ -458,20 +603,17 @@ def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) :
 
 
 
-def raw_osdata_TS2D_plot_mgr( 	osdata_leaf, modifier_function = None, 
-							cmap = None, logscale = 0, sym_logscale = False,
-							title = '',
-							ndump_fac = 1, bounds = None,
-							log_min = 1e-8, use_divnorm = False,
-							vmin = None, vmax = None, if_abs = False ) : 
+# def slice_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) : 
+
+# 	return lambda index :  osdata_leaf.file_managers[ index // ndump_fac ].unpack()
+
+
+
+def raw_osdata_TS2D_plot_mgr( osdata_leaf, ndump_fac, modifier_function = None, **kwargs ) :
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
-	plotter = Plotter2D( 	cmap = cmap, 	
-							logscale = logscale, sym_logscale = sym_logscale,
-							title = title, 
-							bounds = bounds,
-							use_divnorm = use_divnorm, log_min = log_min,
-							vmin = vmin, vmax = vmax, if_abs = if_abs )
+
+	plotter = Plotter2D( **kwargs )	
 
 	return PlotManager( data_getter, plotter, modifier_function )
 
@@ -520,9 +662,12 @@ def ffmpeg_combine( plotdir, movie_name, duration ):
 
 	# frame_rate = min( 1, nfiles // duration )
 	frame_rate = nfiles / duration	
-	command = 'ffmpeg -r %f -i %s%%*.png -vcodec libx264 -crf 25 -pix_fmt yuv420p -y %s' % ( 
-	# command = 'ffmpeg -r %f -i %s%%*.png -y %s' % ( 
+
+	# note: used to use option -crf 25 (controls visual quality)
+	command = 'ffmpeg -r %f -pattern_type sequence -i %s%%05d.png -vcodec libx264 -pix_fmt yuv420p -y %s' % ( 
     	frame_rate, plotdir, movie_name ) 
+
+
 	print( command ) 
 	os.system( command )
 
@@ -551,11 +696,13 @@ def ffmpeg_combine( plotdir, movie_name, duration ):
 
 def default_suptitle_function( osdata, timesteps, index ) : 
 
-	suptitle = ''
+	# suptitle = ''
 
-	timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
+	suptitle = '\n' + os.path.basename( os.getcwd() )
 	
 	try : 
+		timestep_metadata = osdata.input_deck.get_metadata( 'time_step')
+
 		dt = timestep_metadata[ 'dt' ]
 		ndump = timestep_metadata[ 'ndump' ]
 
@@ -669,9 +816,14 @@ def make_TS_movie(  osdata, timesteps,
 	# indices = timesteps[ :: spacing ]
 	indices = spacing * np.arange( nframes, dtype = int )
 
-	print( 'INFO: plotting indices: ' + str( indices ) ) 
-	print( 'INFO: corresponding abs times: ' + str( osdata.input_deck.get_abs_times( timesteps[ indices ] )) )
+	try :
+		abs_times = osdata.input_deck.get_abs_times( timesteps[ indices ] )
+		print( 'INFO: plotting indices: ' + str( indices ) ) 
+		print( 'INFO: corresponding abs times: ' + str( abs_times ) ) 
 
+	except :
+		...
+		
 	if print_progress : 
 		print( "Making movie..." )
 
@@ -729,6 +881,8 @@ def make_TS_movie(  osdata, timesteps,
 		pool = pathos.multiprocessing.ProcessingPool( nproc ) 
 
 		pool.map( handle_index, range( len( indices ) ) )	
+
+		pool.close()
 
 	else : 
 		for i in range( len( indices) ) : 

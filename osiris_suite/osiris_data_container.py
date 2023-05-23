@@ -19,7 +19,7 @@ class H5FileManager( object ) :
 
 		self.path = path 
 		self.file = None 
-		self.data_key = data_key 
+		self.data_key = data_key
 
 
 	def load( self ) : 
@@ -134,7 +134,8 @@ class OsirisDataContainer( object ) :
 	def __init__( self, data_path = None, input_deck_path = None, 
 				load_whole_file = False,
 				load_empty_directories = False,
-				silent = False , index_by_timestep = False ) : 
+				silent = False , index_by_timestep = False,
+		                qpad = False ) : 
 		'''
 			data_path: path to parent directory containing all OSIRIS data (i.e. the directory)
 				containing the OSIRIS output directory MS).
@@ -153,6 +154,8 @@ class OsirisDataContainer( object ) :
 			index_by_timestep: if True, data is stored with index = t_0, ..., t_N where t_i are the N timesteps 
 				output for this data in the simulation. if False, the data is stored with index = 0 ... N independent 
 				of the timesteps. in either case the timesteps variable stores the values t_0 ... t_N.
+
+		        qpad: read qpad files.
 		'''
 	
 		if not os.path.exists( data_path ) : 
@@ -164,6 +167,11 @@ class OsirisDataContainer( object ) :
 		self.load_empty_directories = load_empty_directories
 		self.silent = silent 
 		self.index_by_timestep = index_by_timestep
+		
+		if not qpad :
+			self.get_timestep = get_timestep_osiris
+		else :
+			self.get_timestep = get_timestep_qpad
 
 		# data structures
 		self.data = RecursiveAttrDict() 
@@ -180,7 +188,7 @@ class OsirisDataContainer( object ) :
 
 		if self.input_deck_path is not None : 
 			self.input_deck = InputDeckManager( self.input_deck_path )
-
+			
 		# track all the indices that have data loaded 
 		# self.loaded_indices = set()
 		# self._keys_at_prefix = {} 
@@ -259,7 +267,7 @@ class OsirisDataContainer( object ) :
 	def collect_h5_paths( self, parent_dict, directory, indices, slice_ = None ) : 
 
 		files = sorted( glob.glob( directory + '/*.h5' ) )
-		timesteps = [ get_timestep( fname ) for fname in files ]
+		timesteps = [ self.get_timestep( fname ) for fname in files ]
 
 		varname = os.path.basename( os.path.normpath( directory ) )
 
@@ -368,12 +376,11 @@ class OsirisDataContainer( object ) :
 		
 			
 # helper functions
-def idx_to_str( idx ) :
+def idx_to_str_osiris( idx ) :
 	return '%06d' % idx 
 
 
-
-def get_timestep( os_h5_fname ) : 
+def get_timestep_osiris( os_h5_fname ) : 
 	left = os_h5_fname.rfind( '-' ) + 1 
 	right = os_h5_fname.rfind( '.' )
 
@@ -381,6 +388,19 @@ def get_timestep( os_h5_fname ) :
 	# print( timestep )
 	return timestep 
 
+
+def idx_to_str_qpad( idx ) :
+	return '%08d' % idx 
+
+
+def get_timestep_qpad( os_h5_fname ) :
+	
+	left = os_h5_fname.rfind( '_' ) + 1 
+	right = os_h5_fname.rfind( '.' )
+	
+	timestep = int( os_h5_fname[ left : right ] )
+	# print( timestep )
+	return timestep
 
 
 def get_num_files( output_path ) :	
