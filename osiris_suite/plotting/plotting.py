@@ -127,7 +127,7 @@ class Plotter2D( object ) :
 		try :
 			self.transpose = kwargs[ 'transpose' ]
 		except :
-			self.transpose = True
+			self.transpose = False
 
 		try :
 			self.flipaxis = kwargs[ 'flipaxis' ]
