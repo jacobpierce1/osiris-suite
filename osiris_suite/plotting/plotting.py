@@ -153,7 +153,7 @@ class Plotter2D( object ) :
 			for i in range(2) : 
 				for j in range(2) : 
 					if self.bounds[i][j] is not None : 
-						new_axes[i,j] = ops[j]( new_axes[i,j], self.kwargs['bounds'][i][j] )
+						new_axes[i,j] = ops[j]( new_axes[i,j], self.bounds[i][j] )
 
 			dx = ( axes[:,1] - axes[:,0] ) / data.shape
 			imin = np.floor( (new_axes[:,0] - axes[:,0]) / dx ).astype( int ) 
@@ -166,7 +166,8 @@ class Plotter2D( object ) :
 
 		if self.transpose : 
 			data = data.T 
-
+			new_axes = np.flip( new_axes, axis = 0 )
+			
 		if self.flipaxis is not None  :
 			data = np.flip( data, axis = self.flipaxis ) 
 			
@@ -463,12 +464,13 @@ class Plotter2DProj1D( object ) :
 
 			
 	def plot( self, ax, data, axes ) : 
-
+		
 		if data.ndim != 2 : 
-			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays') 
+			raise OsirisSuiteError( 'ERROR: Plotter1DProjection currently only supports 2D input arrays')
 
 		if self.transpose : 
-			data = data.T 
+			data = data.T
+			axes = np.flip( axes, axis = 0 ) 
 
 		if self.flipaxis is not None  :
 			data = np.flip( data, axis = self.flipaxis ) 
@@ -609,7 +611,7 @@ def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) :
 
 
 
-def raw_osdata_TS2D_plot_mgr( osdata_leaf, ndump_fac, modifier_function = None, **kwargs ) :
+def raw_osdata_TS2D_plot_mgr( osdata_leaf, ndump_fac = 1, modifier_function = None, **kwargs ) :
 		
 	data_getter = raw_osdata_TS_data_getter( osdata_leaf, ndump_fac )
 
