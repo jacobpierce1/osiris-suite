@@ -600,7 +600,6 @@ class Plotter1D( object ) :
 
 
 def raw_osdata_TS_data_getter( osdata_leaf, ndump_fac = 1 ) : 
-
 	return lambda index :  osdata_leaf.file_managers[ index // ndump_fac ].unpack()
 
 
