@@ -268,6 +268,7 @@ class OsirisDataContainer( object ) :
 
 		files = sorted( glob.glob( directory + '/*.h5' ) )
 		timesteps = [ self.get_timestep( fname ) for fname in files ]
+		timesteps = np.array( timesteps ) 
 
 		varname = os.path.basename( os.path.normpath( directory ) )
 
