@@ -174,6 +174,9 @@ class InputDeckManager( object ) :
         return self.metadata[ idx ] 
 
 
+    def __contains__( self, attr ) :
+        return ( attr in self.keys )
+        
 
     def __getitem__( self, attr_occurrence_val_tuple ) :
 
